@@ -21,12 +21,20 @@ public class ResourceUtil {
     private static String basePathMac = SEP + "Users" + SEP + "MCCache" + SEP;
     private static boolean needRemoveCache;
 
-
+    /**
+     * register textures that needs to be extracted to local cache folder.
+     * @param location Texture ResourceLocation.
+     */
     public static void register(ResourceLocation location){
         extractingResources.add("assets/" + location.getNamespace() + "/" + location.getPath());
     }
 
-    private static void extract(int index){
+    /**
+     * Extract a specific registered texture from jar to local cache folder.
+     *
+     * @param index The index of the texture.
+     */
+    public static void extract(int index){
         InputStream ins = ResourceUtil.class.getClassLoader().getResourceAsStream(extractingResources.get(index));
         String fPath;
 
@@ -72,6 +80,11 @@ public class ResourceUtil {
         LOGGER.info("Extracted file: " + fPath);
     }
 
+    /**
+     * Extract all registered textures from jar to local cache folder.
+     *
+     *
+     */
     public static void extractAll()  {
         for(int i = 0; i < extractingResources.size(); i++){
             extract(i);
@@ -95,15 +108,28 @@ public class ResourceUtil {
         }
     }
 
+    /**
+     * Add file name (without path), which will not be removed by removeAll
+     * @param exc
+     */
     public static void addExclusion(String exc) {
         removeExclusion.add(exc);
     }
 
+    /**
+     * Remove all cached file.<bt/>
+     * If a file is added to the exclusion, it will not be removed.
+     *
+     */
     public static void removeAll(){
         removeRecursively(basePathWin);
         LOGGER.info("Old file removed!");
     }
 
+    /**
+     * Get the registered file name by index.
+     * @return Full path of file at index.
+     */
     public static String getFileName(int index){
         String fPath;
         if(OS_NAME.startsWith("win")){
@@ -114,6 +140,10 @@ public class ResourceUtil {
         return fPath;
     }
 
+    /**
+     * Get the base path of cached file folder.
+     * @return
+     */
     public static String getBasePath(){
         if(OS_NAME.startsWith("win")){
             return basePathWin;
@@ -122,6 +152,10 @@ public class ResourceUtil {
         }
     }
 
+    /**
+     *  Get the path of ffmpeg path.
+     * @throws IOException If ffmpeg does not exist.
+     */
     public static String getFfmpegPath() throws IOException {
         String path;
         if(OS_NAME.startsWith("win")){
@@ -135,6 +169,9 @@ public class ResourceUtil {
         return path;
     }
 
+    /**
+     * Set the cache file folder path.
+     */
     public static void setBasePath(String path){
         if(OS_NAME.startsWith("win")){
             basePathWin = path;
@@ -143,20 +180,26 @@ public class ResourceUtil {
         }
     }
 
+    /**
+     * Whether the cached file need to be removed when quitting the game.<br/>
+     * Note that if the game is crashed or exit unexpectedly, cached file will not be removed
+     *
+     */
     public static void needRemoveCache(boolean need){
         needRemoveCache = need;
     }
+
 
     public static boolean isNeedRemoveCache(){
         return needRemoveCache;
     }
 
+    /**
+     *
+     * @return separating symbol of the system
+     */
     public static String getSEP(){
         return SEP;
-    }
-
-    public static ArrayList<String> getExtractedResources(){
-        return extractingResources;
     }
 
 }

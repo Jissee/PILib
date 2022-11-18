@@ -41,37 +41,50 @@ public class VideoResource implements Texture2D {
     private String outPath;
     private ProcessBuilder pb;
 
-
-    public VideoResource(File videoFile,String name, long nanoInterval){
+    /**
+     * @param videoFile The local video file.
+     * @param name The resource name which will ve used to register textures.
+     * @param nanoInterval Interval time between two frames in nanoseconds.
+     * @param needDecode Whether the file needs to be decoded after creation. You can decode it later.
+     */
+    public VideoResource(File videoFile, String name, long nanoInterval, boolean needDecode){
         this.videoFile = videoFile;
         this.name = name;
         this.nanoInterval = nanoInterval;
         this.fps = (int) (1.0 / (nanoInterval / 1e9));
         this.statusCode = Texture2DManager.ControlCode.NONE;
-        LOGGER.info("Video resources are going to be decoded.");
-        LOGGER.info("Make Sure you have enough disk space and ffmpeg have been installed in the MCCache folder.");
-        try {
-            prepareDecode();
-            beginDecode();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if(needDecode){
+            try {
+                prepareDecode();
+                beginDecode();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
+
     }
 
-    public VideoResource(File videoFile, String name, int fpsRate){
+    /**
+     * @param videoFile The local video file.
+     * @param name The resource name which will ve used to register textures.
+     * @param fpsRate fps of the video.
+     * @param needDecode Whether the file needs to be decoded after creation. You can decode it later.
+     */
+    public VideoResource(File videoFile, String name, int fpsRate, boolean needDecode){
         this.videoFile = videoFile;
         this.name = name;
         this.fps = fpsRate;
         this.nanoInterval = (long) ((1.0 / (double)fpsRate) * 1e9);
         this.statusCode = Texture2DManager.ControlCode.NONE;
-        LOGGER.info("Video resources are going to be decoded.");
-        LOGGER.info("Make Sure you have enough disk space and ffmpeg have been installed in the MCCache folder.");
-        try {
-            prepareDecode();
-            beginDecode();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if(needDecode){
+            try {
+                prepareDecode();
+                beginDecode();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
+
     }
 
 
@@ -129,7 +142,10 @@ public class VideoResource implements Texture2D {
         return (int) ((thisNanoTime - baseNanoTime) / nanoInterval) + 1;
     }
 
-    private void prepareDecode() throws IOException {
+    /**
+     * Must call this before {@link #beginDecode()}.
+     */
+    public void prepareDecode() throws IOException {
         outPath = getBasePath() + "decode" + getSEP();
         pb = new ProcessBuilder(getFfmpegPath(), "-i", videoFile.getPath(), "-r", "" + fps, "-f", "image2", "\"" + outPath  + name + "_\"%d.png");
         File outDirectory = new File(outPath);
@@ -138,8 +154,10 @@ public class VideoResource implements Texture2D {
 
 
 
-    private void beginDecode(){
+    public void beginDecode(){
         try {
+            LOGGER.info("Video resources are going to be decoded.");
+            LOGGER.info("Make Sure you have enough disk space and ffmpeg have been installed in the MCCache folder.");
             pb.start();
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -166,15 +166,28 @@ jar.finalizedBy('reobfJar')
 // However if you are in a multi-project build, dev time needs unobfed jar files, so you can delay the obfuscation until publishing by doing
 // publish.dependsOn('reobfJar')
 
+task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
             artifact jar
+            artifact sourceJar {
+                classifier "sources"
+            }
         }
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/mcmodsrepo"
+            name = "EntityRenderLib2D"
+            url = "https://api-g.cloudsmith.io/maven/jissee/entityrenderlib2d/"
+
+            credentials {
+                username = System.getenv("CLOUDSMITH_USR")
+                password = System.getenv("CLOUDSMITH_PSW")
+            }
         }
     }
 }
