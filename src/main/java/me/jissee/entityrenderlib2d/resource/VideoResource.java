@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.common.MinecraftForge;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -27,7 +28,6 @@ public class VideoResource implements Texture2D {
     private static Logger LOGGER = LogUtils.getLogger();
     private final File videoFile;
     private final String name;
-    private final TextureManager textureManager = Minecraft.getInstance().textureManager;
     private boolean finishedRead = false;
     private NativeImage lastImage;
     private long baseNanoTime = -1;
@@ -112,6 +112,7 @@ public class VideoResource implements Texture2D {
     }
 //MC-257522
     public ResourceLocation getCurrentTexture(){
+        TextureManager textureManager = Minecraft.getInstance().getTextureManager();
         if(statusCode == Texture2DManager.ControlCode.PAUSE){
             return previousTexture;
         }
