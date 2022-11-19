@@ -3,7 +3,7 @@ package me.jissee.entityrenderlib2d.resource;
 import java.util.ArrayList;
 
 /**
- * Used in 2D entities to manage texture sets.
+ * Used in 2D entities to manage texture sets and called by renderer.
  */
 public class Texture2DManager {
     private final ArrayList<Texture2D> textureSets = new ArrayList<>();

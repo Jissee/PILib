@@ -24,7 +24,7 @@ import static me.jissee.entityrenderlib2d.resource.ResourceUtil.*;
  * Please check the size of the decoded frames.<br/>
  */
 public class VideoResource implements Texture2D {
-    private Logger LOGGER = LogUtils.getLogger();
+    private static Logger LOGGER = LogUtils.getLogger();
     private final File videoFile;
     private final String name;
     private final TextureManager textureManager = Minecraft.getInstance().textureManager;
@@ -45,7 +45,7 @@ public class VideoResource implements Texture2D {
      * @param videoFile The local video file.
      * @param name The resource name which will ve used to register textures.
      * @param nanoInterval Interval time between two frames in nanoseconds.
-     * @param needDecode Whether the file needs to be decoded after creation. You can decode it later.
+     * @param needDecode Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
      */
     public VideoResource(File videoFile, String name, long nanoInterval, boolean needDecode){
         this.videoFile = videoFile;
@@ -68,7 +68,7 @@ public class VideoResource implements Texture2D {
      * @param videoFile The local video file.
      * @param name The resource name which will ve used to register textures.
      * @param fpsRate fps of the video.
-     * @param needDecode Whether the file needs to be decoded after creation. You can decode it later.
+     * @param needDecode Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
      */
     public VideoResource(File videoFile, String name, int fpsRate, boolean needDecode){
         this.videoFile = videoFile;
@@ -162,6 +162,17 @@ public class VideoResource implements Texture2D {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void beginDecodeFile(File videoFileStatic, int fps) throws IOException {
+        String staticOutPath = getBasePath() + "decode" + getSEP();
+        String name = videoFileStatic.getName();
+        ProcessBuilder pb = new ProcessBuilder(getFfmpegPath(), "-i", videoFileStatic.getPath(), "-r", "" + fps, "-f", "image2", "\"" + staticOutPath  + name + "_\"%d.png");
+        File outDirectory = new File(staticOutPath);
+        outDirectory.mkdir();
+        LOGGER.info("Video resources " + name + " are going to be decoded.");
+        LOGGER.info("Make Sure you have enough disk space and ffmpeg have been installed in the MCCache folder.");
+        pb.start();
     }
 
 

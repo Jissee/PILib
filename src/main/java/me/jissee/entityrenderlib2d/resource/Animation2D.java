@@ -5,6 +5,9 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A collection of pictures that will be shown as the appearance of the entity.
+ */
 public class Animation2D implements Texture2D {
     private List<ResourceLocation> textures = new ArrayList<>();
     private List<Long> nanoTime = new ArrayList<>();
@@ -23,14 +26,18 @@ public class Animation2D implements Texture2D {
     /**
      *
      * @param repeat Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param nanoInterval The interval nanoseconds between two frames.
+     * @param nanoInterval The interval between two frames in nanoseconds.
      */
     public Animation2D(int repeat, long nanoInterval){
         this.repeat = repeat;
         this.nanoInterval = nanoInterval;
         this.fps = (int) (1.0 / (nanoInterval / 1e9));
     }
-
+    /**
+     *
+     * @param repeat Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
+     * @param fps frames per second.
+     */
     public Animation2D(int repeat, int fps){
         this.repeat = repeat;
         this.fps = fps;
@@ -103,23 +110,43 @@ public class Animation2D implements Texture2D {
         this.repeat = repeat;
     }
 
-    public static Animation2D create(String modId, String indexPlaceholder, String resWithPlaceholder, int startIndex, int endIndex, long nanoInterval, int repeat){
+    /**
+     * Create a collection of animation by a series of file name.
+     * @param modId Mod Id.
+     * @param indexPlaceholder The placeholder of the image series. Must appear in resourceName.
+     * @param resourceName The resource name with the placeholder.
+     * @param startIndex The placeholder will be replaced with indexes, starting from startIndex and
+     * @param endIndex end at endIndex.
+     * @param nanoInterval The interval between two frames in nanoseconds.
+     * @param repeat Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
+     * @return
+     */
+
+    public static Animation2D create(String modId, String indexPlaceholder, String resourceName, int startIndex, int endIndex, long nanoInterval, int repeat){
         Animation2D anim = new Animation2D(repeat,nanoInterval);
         String tmp;
         for(int i = startIndex; i <= endIndex; i++){
-            tmp = resWithPlaceholder.replaceAll(indexPlaceholder, "" + i);
+            tmp = resourceName.replaceAll(indexPlaceholder, "" + i);
             anim.addTexture(new ResourceLocation(modId,tmp));
         }
         return anim;
     }
 
+    /**
+     * Create an Animation2D from SingleTexture2D.
+     */
     public static Animation2D fromSingleTexture2D(SingleTexture2D st2d){
         Animation2D anim = new Animation2D(-1, (long) 1e9);
         anim.addTexture(st2d.getCurrentTexture());
         return anim;
     }
 
-
+    /**
+     * Combine two animations.
+     * @param anim1 The first animation.
+     * @param anim2 The second animation.
+     * @param repeat The times that the whole animation should repeat.
+     */
     public static Animation2D combine(Animation2D anim1, Animation2D anim2, int repeat){
         long interval = anim1.nanoInterval;
         if(anim1.nanoInterval != anim2.nanoInterval){
