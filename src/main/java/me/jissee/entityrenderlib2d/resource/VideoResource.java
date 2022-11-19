@@ -164,10 +164,17 @@ public class VideoResource implements Texture2D {
         }
     }
 
-    public static void beginDecodeFile(File videoFileStatic, int fps) throws IOException {
+    /**
+     * Use ffmpeg to decode video file.
+     * @param videoFileStatic Video file.
+     * @param textureName Decoded pictures filename prefix. The files will be like "name_1.png", "name_2.png", ...
+     * @param fps fps of the video file.
+     * @throws IOException
+     */
+    public static void beginDecodeFile(File videoFileStatic, String textureName, int fps) throws IOException {
         String staticOutPath = getBasePath() + "decode" + getSEP();
         String name = videoFileStatic.getName();
-        ProcessBuilder pb = new ProcessBuilder(getFfmpegPath(), "-i", videoFileStatic.getPath(), "-r", "" + fps, "-f", "image2", "\"" + staticOutPath  + name + "_\"%d.png");
+        ProcessBuilder pb = new ProcessBuilder(getFfmpegPath(), "-i", videoFileStatic.getPath(), "-r", "" + fps, "-f", "image2", "\"" + staticOutPath  + textureName + "_\"%d.png");
         File outDirectory = new File(staticOutPath);
         outDirectory.mkdir();
         LOGGER.info("Video resources " + name + " are going to be decoded.");
