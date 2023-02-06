@@ -12,9 +12,5 @@ public class RenderType2D extends RenderType {
     public static RenderType texture2d(Texture2D texture2D){
         return RenderType.text(texture2D.getCurrentTexture());
     }
-    public enum EntityRenderPosition {
-        BOTTOM,
-        CENTER
 
-    }
 }

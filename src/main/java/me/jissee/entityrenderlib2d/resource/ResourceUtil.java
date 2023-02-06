@@ -2,6 +2,7 @@ package me.jissee.entityrenderlib2d.resource;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -21,8 +22,15 @@ public class ResourceUtil {
     private static String basePathMac = SEP + "Users" + SEP + "MCCache" + SEP;
     private static boolean needRemoveCache;
 
+    static{
+        File path = new File(getBasePath());
+        if(!path.exists()){
+            path.mkdir();
+        }
+    }
+
     /**
-     * register textures that needs to be extracted to local cache folder.
+     * Register textures that needs to be extracted to local cache folder.
      * @param location Texture ResourceLocation.
      */
     public static void register(ResourceLocation location){
@@ -38,11 +46,8 @@ public class ResourceUtil {
         InputStream ins = ResourceUtil.class.getClassLoader().getResourceAsStream(extractingResources.get(index));
         String fPath;
 
-        if(OS_NAME.startsWith("win")){
-            fPath = (basePathWin + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
-        }else{
-            fPath = (basePathMac + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
-        }
+        fPath = (getBasePath() + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
+
 
 
         String dPath = "";
@@ -122,7 +127,7 @@ public class ResourceUtil {
      *
      */
     public static void removeAll(){
-        removeRecursively(basePathWin);
+        removeRecursively(getBasePath());
         LOGGER.info("Old file removed!");
     }
 
@@ -132,11 +137,7 @@ public class ResourceUtil {
      */
     public static String getFileName(int index){
         String fPath;
-        if(OS_NAME.startsWith("win")){
-            fPath = (basePathWin + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
-        }else{
-            fPath = (basePathMac + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
-        }
+        fPath = (getBasePath() + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
         return fPath;
     }
 
@@ -146,9 +147,17 @@ public class ResourceUtil {
      */
     public static String getBasePath(){
         if(OS_NAME.startsWith("win")){
-            return basePathWin;
+            if(FMLLoader.getDist().isDedicatedServer()){
+                return basePathWin + "server" + SEP;
+            }else{
+                return basePathWin + "client" + SEP;
+            }
         }else{
-            return basePathMac;
+            if(FMLLoader.getDist().isDedicatedServer()){
+                return basePathMac + "server" + SEP;
+            }else{
+                return basePathMac + "client" + SEP;
+            }
         }
     }
 
@@ -170,14 +179,16 @@ public class ResourceUtil {
     }
 
     /**
-     * Set the cache file folder path.
+     * Set the cache file folder path for Windows.
      */
-    public static void setBasePath(String path){
-        if(OS_NAME.startsWith("win")){
+    public static void setBasePathWin(String path){
             basePathWin = path;
-        }else{
+    }
+    /**
+     * Set the cache file folder path for Mac.
+     */
+    public static void setBasePathMac(String path){
             basePathMac = path;
-        }
     }
 
     /**

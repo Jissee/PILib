@@ -1,16 +1,16 @@
 package me.jissee.entityrenderlib2d.resource;
 
+import me.jissee.entityrenderlib2d.render.TexturePosition;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A collection of pictures that will be shown as the appearance of the entity.
+ * The animation consists of a collection of pictures that will be shown as the appearance of the entity.
  */
 public class Animation2D implements Texture2D {
     private List<ResourceLocation> textures = new ArrayList<>();
-    private List<Long> nanoTime = new ArrayList<>();
     private int repeat;
     private int repeatCopy;
     private int texturesCount;
@@ -22,26 +22,36 @@ public class Animation2D implements Texture2D {
     private Texture2DManager.ControlCode statusCode;
     private long pauseNanoTime;
     private int pauseIndex;
+    private TexturePosition centeredOn;
+    private boolean perpendicular;
 
     /**
      *
-     * @param repeat Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param nanoInterval The interval between two frames in nanoseconds.
+     * @param repeat        Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
+     * @param nanoInterval  The interval between two frames in nanoseconds.
+     * @param position      Which position will the texture centered on
+     * @param perpendicular Whether the pictures should rotate with the camera or only be perpendicular to the ground
      */
-    public Animation2D(int repeat, long nanoInterval){
+    public Animation2D(int repeat, long nanoInterval, TexturePosition position, boolean perpendicular){
         this.repeat = repeat;
         this.nanoInterval = nanoInterval;
         this.fps = (int) (1.0 / (nanoInterval / 1e9));
+        this.centeredOn = position;
+        this.perpendicular = perpendicular;
     }
     /**
      *
-     * @param repeat Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param fps frames per second.
+     * @param repeat        Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
+     * @param fps           frames per second.
+     * @param position      Which position will the texture centered on
+     * @param perpendicular Whether the pictures should rotate with the camera or only be perpendicular to the ground
      */
-    public Animation2D(int repeat, int fps){
+    public Animation2D(int repeat, int fps, TexturePosition position, boolean perpendicular){
         this.repeat = repeat;
         this.fps = fps;
         this.nanoInterval = (long) (1.0 / (double)fps * 1e9);
+        this.centeredOn = position;
+        this.perpendicular = perpendicular;
     }
 
 
@@ -60,6 +70,26 @@ public class Animation2D implements Texture2D {
         previousIndex = getIndex();
         return textures.get(previousIndex);
     }
+
+    public void setCenteredOn(TexturePosition position){
+        this.centeredOn = position;
+    }
+
+    @Override
+    public TexturePosition getCenteredOn() {
+        return centeredOn;
+    }
+
+    public void setPerpendicular(boolean perpendicular){
+        this.perpendicular = perpendicular;
+    }
+    @Override
+    public boolean isPerpendicular() {
+        return this.perpendicular;
+    }
+
+
+
 
     public int getIndex(){
         if(statusCode == Texture2DManager.ControlCode.PAUSE){
@@ -122,8 +152,8 @@ public class Animation2D implements Texture2D {
      * @return
      */
 
-    public static Animation2D create(String modId, String indexPlaceholder, String resourceName, int startIndex, int endIndex, long nanoInterval, int repeat){
-        Animation2D anim = new Animation2D(repeat,nanoInterval);
+    public static Animation2D create(String modId, String indexPlaceholder, String resourceName, int startIndex, int endIndex, long nanoInterval, int repeat, TexturePosition position, boolean perpendicular){
+        Animation2D anim = new Animation2D(repeat,nanoInterval,position,perpendicular);
         String tmp;
         for(int i = startIndex; i <= endIndex; i++){
             tmp = resourceName.replaceAll(indexPlaceholder, "" + i);
@@ -136,7 +166,7 @@ public class Animation2D implements Texture2D {
      * Create an Animation2D from SingleTexture2D.
      */
     public static Animation2D fromSingleTexture2D(SingleTexture2D st2d){
-        Animation2D anim = new Animation2D(-1, (long) 1e9);
+        Animation2D anim = new Animation2D(-1, (long) 1e9, st2d.getCenteredOn(), st2d.isPerpendicular());
         anim.addTexture(st2d.getCurrentTexture());
         return anim;
     }
@@ -147,13 +177,13 @@ public class Animation2D implements Texture2D {
      * @param anim2 The second animation.
      * @param repeat The times that the whole animation should repeat.
      */
-    public static Animation2D combine(Animation2D anim1, Animation2D anim2, int repeat){
+    public static Animation2D combine(Animation2D anim1, Animation2D anim2, int repeat, TexturePosition position, boolean perpendicular){
         long interval = anim1.nanoInterval;
         if(anim1.nanoInterval != anim2.nanoInterval){
             int fps1 = anim1.fps;
             int fps2 = anim2.fps;
             int resfps = (int) lcm(fps1,fps2);
-            Animation2D anim = new Animation2D(repeat,resfps);
+            Animation2D anim = new Animation2D(repeat, resfps, position, perpendicular);
 
             int cnt1 = resfps / anim1.fps;
             int cnt2 = resfps / anim2.fps;
@@ -179,7 +209,7 @@ public class Animation2D implements Texture2D {
             return anim;
 
         }else {
-            Animation2D anim = new Animation2D(repeat, interval);
+            Animation2D anim = new Animation2D(repeat, interval, position, perpendicular);
             int r = 0;
             r = anim1.repeat > 1 ? anim1.repeat : 1;
             for(; r > 0; r--){

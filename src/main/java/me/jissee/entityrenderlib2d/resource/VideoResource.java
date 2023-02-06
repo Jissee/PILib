@@ -2,11 +2,11 @@ package me.jissee.entityrenderlib2d.resource;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.logging.LogUtils;
+import me.jissee.entityrenderlib2d.render.TexturePosition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.common.MinecraftForge;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -40,20 +40,27 @@ public class VideoResource implements Texture2D {
     private Texture2DManager.ControlCode statusCode;
     private String outPath;
     private ProcessBuilder pb;
+    private boolean needDecode;
+    private TexturePosition centeredOn;
+    private boolean perpendicular;
 
     /**
-     * @param videoFile The local video file.
-     * @param name The resource name which will ve used to register textures.
+     * @param videoFile    The local video file.
+     * @param name         The resource name which will ve used to register textures.
      * @param nanoInterval Interval time between two frames in nanoseconds.
-     * @param needDecode Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
+     * @param needDecode   Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
+     * @param centeredOn   Which point should the texture centered on.
      */
-    public VideoResource(File videoFile, String name, long nanoInterval, boolean needDecode){
+    public VideoResource(File videoFile, String name, long nanoInterval, boolean needDecode, TexturePosition centeredOn, boolean perpendicular){
         this.videoFile = videoFile;
         this.name = name;
         this.nanoInterval = nanoInterval;
         this.fps = (int) (1.0 / (nanoInterval / 1e9));
+        this.centeredOn = centeredOn;
+        this.perpendicular = perpendicular;
         this.statusCode = Texture2DManager.ControlCode.NONE;
-        if(needDecode){
+        this.needDecode = needDecode;
+        if(this.needDecode){
             try {
                 prepareDecode();
                 beginDecode();
@@ -65,18 +72,22 @@ public class VideoResource implements Texture2D {
     }
 
     /**
-     * @param videoFile The local video file.
-     * @param name The resource name which will ve used to register textures.
-     * @param fpsRate fps of the video.
+     * @param videoFile  The local video file.
+     * @param name       The resource name which will ve used to register textures.
+     * @param fpsRate    fps of the video.
      * @param needDecode Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
+     * @param centeredOn Which point should the texture centered on.
      */
-    public VideoResource(File videoFile, String name, int fpsRate, boolean needDecode){
+    public VideoResource(File videoFile, String name, int fpsRate, boolean needDecode, TexturePosition centeredOn, boolean perpendicular){
         this.videoFile = videoFile;
         this.name = name;
         this.fps = fpsRate;
         this.nanoInterval = (long) ((1.0 / (double)fpsRate) * 1e9);
+        this.centeredOn = centeredOn;
+        this.perpendicular = perpendicular;
         this.statusCode = Texture2DManager.ControlCode.NONE;
-        if(needDecode){
+        this.needDecode = needDecode;
+        if(this.needDecode){
             try {
                 prepareDecode();
                 beginDecode();
@@ -129,6 +140,19 @@ public class VideoResource implements Texture2D {
         }
 
         return previousTexture;
+    }
+
+    @Override
+    public TexturePosition getCenteredOn() {
+        return centeredOn;
+    }
+
+    public void setPerpendicular(boolean perpendicular){
+        this.perpendicular = perpendicular;
+    }
+    @Override
+    public boolean isPerpendicular() {
+        return perpendicular;
     }
 
     private int getIndex() {
