@@ -1,6 +1,5 @@
 package me.jissee.entityrenderlib2d.resource;
 
-import me.jissee.entityrenderlib2d.render.RenderType2D;
 import me.jissee.entityrenderlib2d.render.TexturePosition;
 import net.minecraft.resources.ResourceLocation;
 
