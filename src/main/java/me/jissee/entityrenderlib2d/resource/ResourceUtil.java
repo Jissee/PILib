@@ -48,8 +48,6 @@ public class ResourceUtil {
 
         fPath = (getBasePath() + extractingResources.get(index)).replace('/', SEP.charAt(0)).replace('\\', SEP.charAt(0));
 
-
-
         String dPath = "";
         for(int i = fPath.length() - 1; i >= 0; i--){
             if(fPath.charAt(i) == '\\'){

@@ -9,6 +9,7 @@ import me.jissee.entityrenderlib2d.resource.Texture2DManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -16,14 +17,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Team;
 
 public abstract class Renderer2D<T extends Entity & Renderable2D> extends EntityRenderer<T> {
-    protected Renderer2D(EntityRendererProvider.Context pContext) {
-        super(pContext);
-    }
-    private static final Minecraft mc = Minecraft.getInstance();
 
+    private static final Minecraft mc = Minecraft.getInstance();
     private static final float textureSizeX = 100;
     private static final float textureSizeY = 100;
     private static final float offsetX = -50;
@@ -32,46 +32,65 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
     private float textureScaleY = 1;
     private float entityHeight = 1;
     private boolean useRendererSettings = false;
-    private TexturePosition rendererPosition;
-    private boolean rendererPerpendicular;
+    private RenderSetting setting;
 
-
+    protected Renderer2D(EntityRendererProvider.Context pContext) {
+        super(pContext);
+    }
 
 
     @Override
     public void render(T pEntity, float pEntityYaw, float pPartialTick, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
         super.render(pEntity, pEntityYaw, pPartialTick, pPoseStack, pBuffer, pPackedLight);
+        pEntityYaw = angleAdjust2PI(pEntityYaw);
+        float pEntityNormal = (float) (-pEntityYaw + Math.PI / 2);
         Texture2DManager manager = pEntity.getTexture2DManager();
         Texture2D texture2D = manager.getTextureSet();
 
-        TexturePosition position;
+        RenderSetting.TexturePosition position;
         boolean perpendicular;
+        RenderSetting.TextureSide side;
 
         if(useRendererSettings){
-            position = rendererPosition;
-            perpendicular = rendererPerpendicular;
+            position = setting.getPosition();
+            perpendicular = setting.isPerpendicular();
+            side = setting.getTextureSide();
         }else{
-            position = texture2D.getCenteredOn();
-            perpendicular = texture2D.isPerpendicular();
+            position = texture2D.getRenderSetting().getPosition();
+            perpendicular = texture2D.getRenderSetting().isPerpendicular();
+            side = texture2D.getRenderSetting().getTextureSide();
         }
 
         Quaternion orientation = mc.getEntityRenderDispatcher().cameraOrientation();
 
         if(perpendicular){
-            Vector3f v = orientation.toYXZ();
-            orientation = Quaternion.fromYXZ(v.y(), 0f, 0f);
+            if(side == RenderSetting.TextureSide.DOUBLE){
+                float f = angleAdjustNPPI(pEntityYaw);
+                orientation = Quaternion.fromYXZ(f, 0f, 0f);
+            }else{
+                Vector3f v = orientation.toYXZ();
+                orientation = Quaternion.fromYXZ(v.y(), 0f, 0f);
+            }
         }
 
-        pPoseStack.pushPose();
-        if(position == TexturePosition.BOTTOM){
-            pPoseStack.translate(0,0,0);
-        }else {
-            pPoseStack.translate(0,entityHeight / 2,0);
-        }
-        pPoseStack.mulPose(orientation);
-        pPoseStack.scale(-textureScaleX / textureSizeX,-textureScaleY / textureSizeY,0);
+        VertexConsumer builder;
 
-        VertexConsumer builder = pBuffer.getBuffer(RenderType2D.texture2d(texture2D));
+        if(side == RenderSetting.TextureSide.DOUBLE){
+            Vec3 posPlayer = mc.player.getPosition(pPartialTick);
+            Vec3 posEntity = pEntity.getPosition(pPartialTick);
+            Vec2 posDelta = new Vec2((float) (posPlayer.x - posEntity.x), (float) (posPlayer.z - posEntity.z));
+            Vec2 normalDirection = new Vec2((float) Math.cos(pEntityNormal), (float) Math.sin(pEntityNormal));
+            float angleDot = posDelta.dot(normalDirection);
+            if(angleDot > 0){
+                builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureFront()));
+            }else{
+                Vector3f vector3f = orientation.toYXZ();
+                orientation = Quaternion.fromYXZ((float) (vector3f.y() + Math.PI), 0, 0);
+                builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureBack()));
+            }
+        }else{
+            builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureFront()));
+        }
 
         if(pEntity instanceof LivingEntity pLivingEntity){
             if (pLivingEntity.deathTime > 0) {
@@ -84,12 +103,22 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
             }
         }
 
-        if(position == TexturePosition.BOTTOM){
+        pPoseStack.pushPose();
+        if(position == RenderSetting.TexturePosition.BOTTOM){
+            pPoseStack.translate(0,0,0);
+            pPoseStack.mulPose(orientation);
+            pPoseStack.scale(-textureScaleX / textureSizeX,-textureScaleY / textureSizeY,0);
+
             vertex(builder,pPoseStack, 0            + offsetX,0          ,0,0,1,255,pPackedLight);
             vertex(builder,pPoseStack, textureSizeX + offsetX,0          ,0,1,1,255,pPackedLight);
             vertex(builder,pPoseStack, textureSizeX + offsetX,-textureSizeY ,0,1,0,255,pPackedLight);
             vertex(builder,pPoseStack, 0            + offsetX,-textureSizeY ,0,0,0,255,pPackedLight);
-        }else{
+
+        }else {
+            pPoseStack.translate(0,entityHeight / 2,0);
+            pPoseStack.mulPose(orientation);
+            pPoseStack.scale(-textureScaleX / textureSizeX,-textureScaleY / textureSizeY,0);
+
             vertex(builder,pPoseStack, 0            + offsetX,textureSizeY + offsetY,0,0,1,255,pPackedLight);
             vertex(builder,pPoseStack, textureSizeX + offsetX,textureSizeY + offsetY,0,1,1,255,pPackedLight);
             vertex(builder,pPoseStack, textureSizeX + offsetX,0            + offsetY,0,1,0,255,pPackedLight);
@@ -145,15 +174,13 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
         entityHeight = height;
         return this;
     }
-
-    public Renderer2D<T> useRendererProperties(TexturePosition position, boolean perpendicular){
-        this.rendererPosition = position;
-        this.rendererPerpendicular = perpendicular;
+    public Renderer2D<T> useRendererSettings(RenderSetting setting){
+        this.setting = setting;
         this.useRendererSettings = true;
         return this;
     }
 
-    public Renderer2D<T> useTexturesProperties(){
+    public Renderer2D<T> useTexturesSettings(){
         this.useRendererSettings = false;
         return this;
     }
@@ -183,5 +210,32 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
     public ResourceLocation getTextureLocation(T pEntity) {
         throw new IllegalStateException("Renderer2D should not be used for non-2D entities");
     }
+
+    /**
+     *
+     * @return [0, 2π)
+     */
+    private static float angleAdjust2PI(float f){
+        if(f > 2 * Math.PI){
+            float delta = (float) (f - 2 * Math.PI);
+            double i = Math.floor(delta / 2 / Math.PI);
+            return (float) (f - (i + 1) * 2 * Math.PI);
+        }else if(f < 0f){
+            float delta = 0f - f;
+            double i = Math.floor(delta / 2 / Math.PI);
+            return (float) (f + (i + 1) * 2 * Math.PI);
+        }else{
+            return f;
+        }
+    }
+
+    /**
+     *
+     * @return [-π, π)
+     */
+    private static float angleAdjustNPPI(float f){
+        return (float) (angleAdjust2PI(f) - Math.PI);
+    }
+
 
 }

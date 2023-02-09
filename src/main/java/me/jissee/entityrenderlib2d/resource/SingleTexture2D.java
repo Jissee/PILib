@@ -1,36 +1,40 @@
 package me.jissee.entityrenderlib2d.resource;
 
-import me.jissee.entityrenderlib2d.render.TexturePosition;
+import me.jissee.entityrenderlib2d.render.RenderSetting;
 import net.minecraft.resources.ResourceLocation;
 
 /** Use this if there is only one static texture for entity.
  *
  */
 public class SingleTexture2D implements Texture2D{
-    private ResourceLocation resourceLocation;
-    private TexturePosition centeredOn;
-    private boolean perpendicular;
-    public SingleTexture2D(ResourceLocation location, TexturePosition position, boolean perpendicular){
-        this.resourceLocation = location;
-        this.centeredOn = position;
-        this.perpendicular = perpendicular;
+    private final ResourceLocation front;
+    private final ResourceLocation back;
+    private RenderSetting setting;
+
+    public SingleTexture2D(ResourceLocation front, RenderSetting setting){
+        this(front,null,setting);
+    }
+    public SingleTexture2D(ResourceLocation front,ResourceLocation back, RenderSetting setting){
+        this.front = front;
+        this.back = back;
+        this.setting = setting;
     }
     @Override
-    public ResourceLocation getCurrentTexture() {
-        return resourceLocation;
+    public ResourceLocation getCurrentTextureFront() {
+        return front;
     }
 
-    @Override
-    public TexturePosition getCenteredOn() {
-        return centeredOn;
+    public ResourceLocation getCurrentTextureBack() {
+        if(back == null) return front;
+        return back;
     }
 
-    private void setPerpendicular(boolean perpendicular){
-        this.perpendicular = perpendicular;
+    public void setRenderSetting(RenderSetting setting) {
+        this.setting = setting;
     }
     @Override
-    public boolean isPerpendicular() {
-        return perpendicular;
+    public RenderSetting getRenderSetting() {
+        return setting;
     }
 
     @Override

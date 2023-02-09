@@ -8,7 +8,6 @@ import java.util.ArrayList;
 public class Texture2DManager {
     private final ArrayList<Texture2D> textureSets = new ArrayList<>();
     private int texturePtr;
-    private ControlCode formerControllerCode;
     private boolean needReset;
 
     public Texture2DManager(int defaultPtr){

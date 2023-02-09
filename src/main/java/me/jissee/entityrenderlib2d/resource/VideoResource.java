@@ -2,7 +2,7 @@ package me.jissee.entityrenderlib2d.resource;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.logging.LogUtils;
-import me.jissee.entityrenderlib2d.render.TexturePosition;
+import me.jissee.entityrenderlib2d.render.RenderSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -14,24 +14,29 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import static me.jissee.entityrenderlib2d.EntityRenderLib2D.MODID;
 import static me.jissee.entityrenderlib2d.resource.ResourceUtil.*;
 
 
 /**
  * This class is experimental and in need of further development. <br/><br/>
- * When creating video resource, the video will be decoded to frame by ffmpeg and stored in a local cache folder.<br/><br/>
+ * Create a set of Texture2D from the video file. <br/><br/>
+ * The in-game video is SILENT when playing, so register SoundEffects by yourself. <br/><br/>
+ * When creating video resource, the video will be decoded to frames by ffmpeg and stored in a local cache folder.<br/><br/>
+ * It is not advised to include the video file in the mod resource folder, in case the file size can be large,
+ * but you still can do so and extract them with {@link ResourceUtil}.<br/><br/>
+ * It is advised to distribute the video separately in additional resources.<br/><br/>
  * Please check if ffmpeg is installed in the assigned path.<br/><br/>
- * It is not advised to use video resource because the size of local cache can be large.<br/><br/>
- * Please check the size of the decoded frames.<br/>
+ * Please pay attention to the SIZE of decoded frames.<br/>
  */
 public class VideoResource implements Texture2D {
-    private static Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final ResourceLocation BLACK = new ResourceLocation(MODID,"textures/entity/black.png");
     private final File videoFile;
     private final String name;
     private boolean finishedRead = false;
     private NativeImage lastImage;
     private long baseNanoTime = -1;
-    private long thisNanoTime = 0;
     private long pauseNanoTime = 0;
     private int pauseIndex = 0;
     private final long nanoInterval;
@@ -40,24 +45,23 @@ public class VideoResource implements Texture2D {
     private Texture2DManager.ControlCode statusCode;
     private String outPath;
     private ProcessBuilder pb;
-    private boolean needDecode;
-    private TexturePosition centeredOn;
-    private boolean perpendicular;
+    private final boolean needDecode;
+    private RenderSetting setting;
+
 
     /**
      * @param videoFile    The local video file.
      * @param name         The resource name which will ve used to register textures.
      * @param nanoInterval Interval time between two frames in nanoseconds.
      * @param needDecode   Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
-     * @param centeredOn   Which point should the texture centered on.
+     * @param setting      The {@link RenderSetting} of the video.
      */
-    public VideoResource(File videoFile, String name, long nanoInterval, boolean needDecode, TexturePosition centeredOn, boolean perpendicular){
+    public VideoResource(File videoFile, String name, long nanoInterval, boolean needDecode, RenderSetting setting){
         this.videoFile = videoFile;
         this.name = name;
         this.nanoInterval = nanoInterval;
         this.fps = (int) (1.0 / (nanoInterval / 1e9));
-        this.centeredOn = centeredOn;
-        this.perpendicular = perpendicular;
+        this.setting = setting;
         this.statusCode = Texture2DManager.ControlCode.NONE;
         this.needDecode = needDecode;
         if(this.needDecode){
@@ -76,15 +80,14 @@ public class VideoResource implements Texture2D {
      * @param name       The resource name which will ve used to register textures.
      * @param fpsRate    fps of the video.
      * @param needDecode Whether the file needs to be decoded after creation. Set to false if you have decoded before, or you want to decode later.
-     * @param centeredOn Which point should the texture centered on.
+     * @param setting    The {@link RenderSetting} of the video.
      */
-    public VideoResource(File videoFile, String name, int fpsRate, boolean needDecode, TexturePosition centeredOn, boolean perpendicular){
+    public VideoResource(File videoFile, String name, int fpsRate, boolean needDecode, RenderSetting setting){
         this.videoFile = videoFile;
         this.name = name;
         this.fps = fpsRate;
         this.nanoInterval = (long) ((1.0 / (double)fpsRate) * 1e9);
-        this.centeredOn = centeredOn;
-        this.perpendicular = perpendicular;
+        this.setting = setting;
         this.statusCode = Texture2DManager.ControlCode.NONE;
         this.needDecode = needDecode;
         if(this.needDecode){
@@ -122,7 +125,7 @@ public class VideoResource implements Texture2D {
         return lastImage;
     }
 //MC-257522
-    public ResourceLocation getCurrentTexture(){
+    public ResourceLocation getCurrentTextureFront(){
         TextureManager textureManager = Minecraft.getInstance().getTextureManager();
         if(statusCode == Texture2DManager.ControlCode.PAUSE){
             return previousTexture;
@@ -143,23 +146,25 @@ public class VideoResource implements Texture2D {
     }
 
     @Override
-    public TexturePosition getCenteredOn() {
-        return centeredOn;
+    public ResourceLocation getCurrentTextureBack() {
+        return BLACK;
     }
 
-    public void setPerpendicular(boolean perpendicular){
-        this.perpendicular = perpendicular;
+    public void setRenderSetting(RenderSetting setting) {
+        this.setting = setting;
     }
+
     @Override
-    public boolean isPerpendicular() {
-        return perpendicular;
+    public RenderSetting getRenderSetting() {
+        return setting;
     }
+
 
     private int getIndex() {
         if(statusCode == Texture2DManager.ControlCode.PAUSE){
             return pauseIndex;
         }
-        thisNanoTime = System.nanoTime();
+        long thisNanoTime = System.nanoTime();
         if(baseNanoTime == -1){
             baseNanoTime = thisNanoTime;
         }
