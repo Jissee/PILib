@@ -3,8 +3,9 @@ package me.jissee.entityrenderlib2d.resource;
 import me.jissee.entityrenderlib2d.render.RenderSetting;
 import net.minecraft.resources.ResourceLocation;
 
-/** Use this if there is only one static texture for entity.
- *
+/**
+ * 只有单个静止的材质时使用此类<br/>
+ * Use this if there is only one static texture for entity.
  */
 public class SingleTexture2D implements Texture2D{
     private final ResourceLocation front;
@@ -24,6 +25,7 @@ public class SingleTexture2D implements Texture2D{
         return front;
     }
 
+    @Override
     public ResourceLocation getCurrentTextureBack() {
         if(back == null) return front;
         return back;

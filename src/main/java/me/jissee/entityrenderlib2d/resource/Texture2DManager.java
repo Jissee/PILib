@@ -3,13 +3,16 @@ package me.jissee.entityrenderlib2d.resource;
 import java.util.ArrayList;
 
 /**
+ * 在二维实体内使用，被渲染器调用来管理材质<br/><br/>
  * Used in 2D entities to manage texture sets and called by renderer.
  */
 public class Texture2DManager {
     private final ArrayList<Texture2D> textureSets = new ArrayList<>();
     private int texturePtr;
     private boolean needReset;
-
+    public Texture2DManager(){
+        this.texturePtr = 0;
+    }
     public Texture2DManager(int defaultPtr){
         this.texturePtr = defaultPtr;
     }

@@ -21,6 +21,10 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Team;
 
+/**
+ * 二维渲染器<br/><br/> 
+ * Renderer for 2D entities.<br/><br/>
+ */
 public abstract class Renderer2D<T extends Entity & Renderable2D> extends EntityRenderer<T> {
 
     private static final Minecraft mc = Minecraft.getInstance();
@@ -164,22 +168,42 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
         }
     }
 
+    /**
+     * 渲染器忽视材质原始大小，渲染时会将其拉伸至指定大小（单位：方块）<br/>
+     * The renderer will ignore the origin size of the texture and resize it to the assigned size. Unit: block(s)
+     * @param x 水平长度 Width
+     * @param y 垂直高度 Height
+     */
     public Renderer2D<T> setTextureScale(float x, float y){
         textureScaleX = x;
         textureScaleY = y;
         return this;
     }
 
+    /**
+     * 设定实体的大小，用来确定实体中心点的位置<br/>
+     * Set the height of the entity, which is used to determine the center of the entity.
+     */
+
     public Renderer2D<T> setEntityHeight(float height){
         entityHeight = height;
         return this;
     }
+
+    /**
+     * 调用后所有此渲染器渲染的实体均会采用相同的设定<br/>
+     * Any entities that rendered by this renderer will use the same setting.
+     */
     public Renderer2D<T> useRendererSettings(RenderSetting setting){
         this.setting = setting;
         this.useRendererSettings = true;
         return this;
     }
 
+    /**
+     * 调用后所有此渲染器渲染的实体均会采用其二维材质的设定<br/>
+     * Any entities that rendered by this renderer will use the settings from its own textures.
+     */
     public Renderer2D<T> useTexturesSettings(){
         this.useRendererSettings = false;
         return this;
@@ -203,6 +227,7 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
 
 
     /**
+     * 二维渲染器不能用于非二维实体，请使用{@link Texture2DManager}来管理和获取二维材质<br/>
      * Renderer2D should not be used for non-2D entities.<br/>
      * Use {@link Texture2DManager} instead.
      */

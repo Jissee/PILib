@@ -2,6 +2,7 @@ package me.jissee.entityrenderlib2d;
 
 import com.mojang.logging.LogUtils;
 import me.jissee.entityrenderlib2d.resource.ResourceUtil;
+import me.jissee.entityrenderlib2d.test.Main;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.GameShuttingDownEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -21,15 +22,13 @@ public class EntityRenderLib2D
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public EntityRenderLib2D(){
+        //Main.setuptest();
         MinecraftForge.EVENT_BUS.register(this);
     }
 
     @SubscribeEvent
     public void Finalize(GameShuttingDownEvent event){
-        if(ResourceUtil.isNeedRemoveCache()){
-            LOGGER.info("Removing all cached files");
-            ResourceUtil.removeAll();
-        }
+        ResourceUtil.Finalize();
     }
 
 
