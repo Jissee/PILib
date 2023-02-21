@@ -1,0 +1,9 @@
+{
+  "music.xyy25": {
+    "sounds": [{
+      "name": "entityrenderlib2d:music/xyy25",
+      "stream": true,
+      "attenuation_distance": 16
+    }]
+  }
+}
