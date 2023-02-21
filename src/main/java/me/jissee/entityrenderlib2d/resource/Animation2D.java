@@ -169,8 +169,8 @@ public class Animation2D implements Texture2D {
      * Add Textures sequentially. (Single Side)
      * @param texture 正面材质 Texture of front side
      */
-    public void addTexture(ResourceLocation texture){
-        addTexture(texture, null);
+    public Animation2D addTexture(ResourceLocation texture){
+        return addTexture(texture, null);
     }
 
     /**
@@ -179,10 +179,11 @@ public class Animation2D implements Texture2D {
      * @param texture 正面材质 Texture of front side
      * @param textureBack 反面材质 Texture of back side
      */
-    public void addTexture(ResourceLocation texture, ResourceLocation textureBack){
+    public Animation2D addTexture(ResourceLocation texture, ResourceLocation textureBack){
         texturesCount++;
         textures.add(texture);
         texturesBack.add(textureBack);
+        return this;
     }
 
 
