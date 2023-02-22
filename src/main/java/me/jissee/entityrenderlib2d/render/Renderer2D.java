@@ -98,8 +98,7 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
                 //orientation = Quaternion.fromYXZ((float) (vector3f.y() + Math.PI), 0, 0);
                 //-Vector3f vector3f = orientation.getEulerAnglesYXZ(null);
 
-                orientation.rotateX((float) Math.PI);
-                orientation.rotateZ((float) Math.PI);
+                orientation.rotateY((float) Math.PI);
                 builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureBack()));
             }
         }else{
