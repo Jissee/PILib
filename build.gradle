@@ -5,9 +5,9 @@ plugins {
     id 'org.parchmentmc.librarian.forgegradle' version '1.+'
 }
 
-version = '1.19.3-1.3'
-group = 'me.jissee.entityrenderlib' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = 'EntityRenderLib2D'
+version = '1.19.3-3.1'
+group = 'me.jissee.pilib' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = 'PILib'
 
 // Mojang ships Java 17 to end users in 1.18+, so your mod should target Java 17.
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -51,10 +51,10 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-            property 'forge.enabledGameTestNamespaces', 'entityrenderlib2d'
+            property 'forge.enabledGameTestNamespaces', 'pilib'
 
             mods {
-                entityrenderlib2d {
+                pilib {
                     source sourceSets.main
                 }
             }
@@ -67,10 +67,10 @@ minecraft {
 
             property 'forge.logging.console.level', 'debug'
 
-            property 'forge.enabledGameTestNamespaces', 'entityrenderlib2d'
+            property 'forge.enabledGameTestNamespaces', 'pilib'
 
             mods {
-                entityrenderlib2d {
+                pilib {
                     source sourceSets.main
                 }
             }
@@ -86,10 +86,10 @@ minecraft {
 
             property 'forge.logging.console.level', 'debug'
 
-            property 'forge.enabledGameTestNamespaces', 'entityrenderlib2d'
+            property 'forge.enabledGameTestNamespaces', 'pilib'
 
             mods {
-                entityrenderlib2d {
+                pilib {
                     source sourceSets.main
                 }
             }
@@ -103,10 +103,10 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            args '--mod', 'entityrenderlib2d', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            args '--mod', 'pilib', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
 
             mods {
-                entityrenderlib2d {
+                pilib {
                     source sourceSets.main
                 }
             }
@@ -149,16 +149,16 @@ dependencies {
 jar {
     manifest {
         attributes([
-                "Specification-Title"     : "entityrenderlib2d",
-                "Specification-Vendor"    : "entityrenderlib2dsareus",
+                "Specification-Title"     : "pilib",
+                "Specification-Vendor"    : "pilibsareus",
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
                 "Implementation-Version"  : project.jar.archiveVersion,
-                "Implementation-Vendor"   : "entityrenderlib2dsareus",
+                "Implementation-Vendor"   : "pilibsareus",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
-    //exclude('me/jissee/entityrenderlib2d/test')
+    //exclude('me/jissee/pilib/test')
 }
 
 // Example configuration to allow publishing using the maven-publish plugin
@@ -182,8 +182,8 @@ publishing {
     }
     repositories {
         maven {
-            name = "EntityRenderLib2D"
-            url = "https://api-g.cloudsmith.io/maven/jissee/entityrenderlib2d/"
+            name = "pilib"
+            url = "https://api-g.cloudsmith.io/maven/jissee/pilib/"
 
             credentials {
                 username = System.getenv("CLOUDSMITH_USR")

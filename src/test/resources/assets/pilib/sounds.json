@@ -1,0 +1,9 @@
+{
+  "music.xyy25": {
+    "sounds": [{
+      "name": "pilib:music/xyy25",
+      "stream": true,
+      "attenuation_distance": 16
+    }]
+  }
+}
