@@ -18,6 +18,14 @@ dependencies {
     implementation fg.deobf('me.jissee.pilib:PILib-<MC-version>:<LIB-version>')
 }
 ```
+Latest versions
+
+| Minecraft  | Lib   |
+| :--------: | :---: |
+| 1.19.3     | 3.1   |
+| 1.19.2     | 3.1   |
+
+
 
 Currently, it only runs on forge 1.19.2 and 1.19.3, but it is scheduled to back port to some legacy versions.   
 Also, the compatibility on different platforms is also in need of development and test.
