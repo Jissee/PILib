@@ -10,19 +10,17 @@ import net.minecraft.resources.ResourceLocation;
 public class SingleTexture2D implements Texture2D{
     private final ResourceLocation front;
     private final ResourceLocation back;
-    private final float scaleX;
-    private final float scaleY;
-    private RenderSetting setting;
+    private TextureSetting textureSetting;
+    private RenderSetting renderSetting;
 
-    public SingleTexture2D(ResourceLocation front,float scaleX,float scaleY, RenderSetting setting){
-        this(front,null,scaleX,scaleY,setting);
+    public SingleTexture2D(ResourceLocation front, TextureSetting textureSetting, RenderSetting renderSetting){
+        this(front,null,textureSetting, renderSetting);
     }
-    public SingleTexture2D(ResourceLocation front,ResourceLocation back, float scaleX,float scaleY, RenderSetting setting){
+    public SingleTexture2D(ResourceLocation front, ResourceLocation back, TextureSetting textureSetting, RenderSetting renderSetting){
         this.front = front;
         this.back = back;
-        this.scaleX = scaleX;
-        this.scaleY = scaleY;
-        this.setting = setting;
+        this.textureSetting = textureSetting;
+        this.renderSetting = renderSetting;
     }
     @Override
     public ResourceLocation getCurrentTextureFront() {
@@ -34,29 +32,44 @@ public class SingleTexture2D implements Texture2D{
         if(back == null) return front;
         return back;
     }
-
-    public void setRenderSetting(RenderSetting setting) {
-        this.setting = setting;
+    public SingleTexture2D setRenderSetting(RenderSetting setting) {
+        this.renderSetting = setting;
+        return this;
     }
     @Override
     public RenderSetting getRenderSetting() {
-        return setting;
+        return renderSetting;
     }
 
     @Override
-    public float getScaleX() {
-        return scaleX;
+    public TextureControlCode getStatusCode() {
+        return TextureControlCode.PLAYING;
     }
 
     @Override
-    public float getScaleY() {
-        return scaleY;
+    public void setStatusCode(TextureControlCode code) {
+
     }
 
     @Override
-    public void startOrReset() {
+    public int getProgress() {
+        return (int) (0.5 * MAX_PROGRESS);
+    }
+
+    @Override
+    public void setProgress(int progress) {
 
     }
+
+    public SingleTexture2D setTextureSetting(TextureSetting setting) {
+        this.textureSetting = setting;
+        return this;
+    }
+    @Override
+    public TextureSetting getTextureSetting() {
+        return textureSetting;
+    }
+
 
     @Override
     public void pause() {
@@ -65,6 +78,11 @@ public class SingleTexture2D implements Texture2D{
 
     @Override
     public void resume() {
+
+    }
+
+    @Override
+    public void tick() {
 
     }
 }

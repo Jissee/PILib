@@ -2,10 +2,8 @@ package me.jissee.pilib.test.entity;
 
 import me.jissee.pilib.render.RenderSetting;
 import me.jissee.pilib.render.Renderable2D;
-import me.jissee.pilib.resource.Animation2D;
-import me.jissee.pilib.resource.ResourceUtil;
-import me.jissee.pilib.resource.Texture2DManager;
-import me.jissee.pilib.resource.VideoResource;
+import me.jissee.pilib.resource.*;
+import me.jissee.pilib.test.Main;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -16,19 +14,16 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
-import java.io.File;
-
 import static me.jissee.pilib.PILib.MODID;
-import static me.jissee.pilib.resource.ResourceUtil.toNanoInterval;
+import static me.jissee.pilib.resource.LocalResourceUtil.toNanoInterval;
+import static me.jissee.pilib.test.Main.UTIL;
 import static me.jissee.pilib.test.client.MSoundEvents.XYY25;
 
 
 public class TestEntity extends Mob implements Renderable2D {
 
     private Player interactingWith;
-    private final Texture2DManager manager = new Texture2DManager(0);
-
-    private Texture2DManager.ControlCode controlCode = Texture2DManager.ControlCode.NONE;
+    private final Texture2DManager manager = new Texture2DManager(this, 0);
     private float yrot = 0f;
     public static VideoResource vdo;
 
@@ -38,9 +33,9 @@ public class TestEntity extends Mob implements Renderable2D {
         manager.addTextureSet(prepareAnimation2())
                 .addTextureSet(prepareAnimation3())
                 .addTextureSet(prepareCombined4())
-                .addTextureSet(prepareVideo5())
-        ;
-                //.addTextureSet(vdo.setEntity(this).setSound(XYY25.get()));
+                .addTextureSet(prepareVideo5());
+
+
 
     }
 
@@ -56,10 +51,10 @@ public class TestEntity extends Mob implements Renderable2D {
     @Override
     public void tick() {
         super.tick();
-        if(controlCode == Texture2DManager.ControlCode.RESUME){
+        //if(textureControlCode == TextureControlCode.PAUSE){
             yrot += 0.01;
             //if(yrot > 2 * Math.PI) yrot -= 2 * Math.PI;
-        }
+        //}
         this.setYRot(yrot);
         //this.lookAt(EntityAnchorArgument.Anchor.EYES,new Vec3(0,yrot,0));
     }
@@ -70,16 +65,16 @@ public class TestEntity extends Mob implements Renderable2D {
         int num = pPlayer.getItemInHand(pHand).getCount();
         switch (num){
             case 1:
-                manager.changeTextureSet(0,false,true);
+                manager.change(0,0);
                 break;
             case 2:
-                manager.changeTextureSet(1,false,true);
+                manager.change(1,0);
                 break;
             case 3:
-                manager.changeTextureSet(2,false,true);
+                manager.change(2,0);
                 break;
             case 4:
-                manager.changeTextureSet(3,false,true);
+                manager.change(3,0);
                 break;
             case 63:
                 manager.pause();
@@ -103,27 +98,31 @@ public class TestEntity extends Mob implements Renderable2D {
 
 
     public Animation2D prepareAnimation2(){
-        return Animation2D.createSingleSide(MODID,"%i","textures/entity/pic_%i.png",7,14,49f/70f,77f/70f, toNanoInterval(25),-1,RenderSetting.PERPENDICULAR_SINGLE);
-        //new Animation2D(-1,(long) 1e9, RenderSetting.PERPENDICULAR_DOUBLE);
+        return Animation2D.createSingleSide(MODID,"%i","textures/entity/pic_%i.png",
+                7,14,toNanoInterval(25),10,TextureControlCode.PLAYING,
+                new TextureSetting(49f/70f,77f/70f)
+                ,RenderSetting.BOTTOM_ROTATIONAL_SINGLE);
     }
     public Animation2D prepareAnimation3(){
-        return new Animation2D(-1,toNanoInterval(1),RenderSetting.PERPENDICULAR_SINGLE)
+        return new Animation2D(-1,toNanoInterval(1),TextureControlCode.PLAYING,
+                new TextureSetting(1.92f,1.08f),
+                RenderSetting.PERPENDICULAR_SINGLE)
                 .addTexture(new ResourceLocation(MODID, "textures/entity/png_t.png"))
-                .addTexture(new ResourceLocation(MODID, "textures/entity/png.png"))
-                .setTextureScale(1.92f,1.08f);
+                .addTexture(new ResourceLocation(MODID, "textures/entity/png.png"));
     }
     public Animation2D.Combined prepareCombined4(){
-        return new Animation2D.Combined()
+        return new Animation2D.Combined(TextureControlCode.PLAYING)
                 .add(prepareAnimation2().setRepeat(10))
                 .add(prepareAnimation3().setRepeat(10))
                 .setRepeat(1);
     }
 
     public VideoResource prepareVideo5(){
-         return new VideoResource(new File(ResourceUtil.getFileName(MODID, 0)), "", 25f, XYY25.get(), 3.2f,1.8f,true, RenderSetting.CENTER_ROTATIONAL_SINGLE).setEntity(this);
+        return Main.vdo.setSound(XYY25.get());
     }
 
     public static VideoResource prepareVideo6(){
-        return new VideoResource(new File("I:\\develop\\xyys04e01.mp4"),"s04e01",24f, null, 3.2f,1.8f,true,RenderSetting.CENTER_ROTATIONAL_SINGLE);
+        LocalVideoFile f = new LocalVideoFile(UTIL,"I:\\develop\\xyys04e01.mp4","s04e01",21049,24);
+        return new VideoResource(f,null, TextureControlCode.PLAYING, new TextureSetting(3.2f,1.8f),RenderSetting.CENTER_ROTATIONAL_SINGLE);
     }
 }
