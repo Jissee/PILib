@@ -47,42 +47,29 @@ public class SingleTexture2D implements Texture2D{
     }
 
     @Override
-    public void setStatusCode(TextureControlCode code) {
-
-    }
+    public void setStatusCode(TextureControlCode code) {}
 
     @Override
-    public int getProgress() {
-        return (int) (0.5 * MAX_PROGRESS);
-    }
+    public int getProgress() {return (int) (0.5 * MAX_PROGRESS);}
 
     @Override
-    public void setProgress(int progress) {
+    public void setProgress(int progress) {}
 
-    }
 
     public SingleTexture2D setTextureSetting(TextureSetting setting) {
         this.textureSetting = setting;
         return this;
     }
     @Override
-    public TextureSetting getTextureSetting() {
-        return textureSetting;
-    }
+    public TextureSetting getTextureSetting() {return textureSetting;}
 
 
     @Override
-    public void pause() {
-
-    }
+    public void pause() {}
 
     @Override
-    public void resume() {
-
-    }
+    public void resume() {}
 
     @Override
-    public void tick() {
-
-    }
+    public void tick() {}
 }

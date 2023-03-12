@@ -178,7 +178,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
      */
     public void autoPause(){
         if(!isPaused()){
-            pause();
+            textureSets.get(texturePtr).pause();
             autoPause = true;
         }
     }
@@ -188,8 +188,10 @@ public class Texture2DManager implements Iterable<Texture2D> {
      * (Single-player only) When the game is resumed, the renderer will auto resume the resource.
      */
     public void autoResume(){
-        resume();
-        autoPause = false;
+        if(autoPause && isPaused()){
+            textureSets.get(texturePtr).resume();
+            autoPause = false;
+        }
     }
 
     /**

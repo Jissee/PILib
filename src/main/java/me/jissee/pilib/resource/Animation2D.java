@@ -19,16 +19,15 @@ public class Animation2D implements Texture2D {
     private final List<ResourceLocation> texturesBack = new ArrayList<>();
     private int repeat;
     private int texturesCount;
-    private double fps = 0;
     private long nanoInterval = 0;
     private RenderSetting renderSetting;
     private TextureSetting textureSetting;
     private TextureControlCode statusCode;
     private int previousIndex = 0;
     private long baseNanoTime = -1;
-    //private long pauseNanoTime;
     private int pauseProgress;
     private long totalTime = 0;
+    private long singleAnimTime = 0;
     private int pauseIndex = -1;
 
 
@@ -140,7 +139,6 @@ public class Animation2D implements Texture2D {
     public Animation2D(int repeat, long nanoInterval, TextureControlCode defaultStatus, TextureSetting textureSetting, RenderSetting renderSetting){
         this.repeat = repeat;
         this.nanoInterval = nanoInterval;
-        this.fps = toFPS(nanoInterval);
         this.statusCode = defaultStatus;
         this.textureSetting = textureSetting;
         this.renderSetting = renderSetting;
@@ -165,7 +163,8 @@ public class Animation2D implements Texture2D {
         texturesCount++;
         textures.add(texture);
         texturesBack.add(textureBack);
-        this.totalTime += nanoInterval;
+        this.totalTime += nanoInterval * repeat;
+        this.singleAnimTime += nanoInterval;
         return this;
     }
 
@@ -225,7 +224,6 @@ public class Animation2D implements Texture2D {
         pauseProgress = progress;
     }
 
-
     public Animation2D setTextureSetting(TextureSetting setting) {
         this.textureSetting = setting;
         return this;
@@ -238,20 +236,21 @@ public class Animation2D implements Texture2D {
         if(statusCode == TextureControlCode.PAUSE && pauseIndex != -1){
             return pauseIndex;
         }
-        long thisNanoTime = System.nanoTime();
+        long timeNow = System.nanoTime();
         if(baseNanoTime == -1){
-            baseNanoTime = thisNanoTime;
+            baseNanoTime = timeNow;
             return 0;
         }
-        long diff = thisNanoTime - baseNanoTime;
 
-        long pass = diff / totalTime;
+        long diff = timeNow - baseNanoTime;
+
+        long pass = diff / singleAnimTime;
 
         if(repeat != -1 && pass >= repeat){
             return texturesCount - 1;
         }
 
-        diff = diff - pass * totalTime;
+        diff = diff - pass * singleAnimTime;
 
         long index = diff / nanoInterval;
         index = index % texturesCount;
@@ -295,11 +294,9 @@ public class Animation2D implements Texture2D {
         private long totalTime;
         private TextureControlCode statusCode;
         private long baseNanoTime = -1;
-        //private long pauseNanoTime;
         private int pauseProgress;
         private Tuple<Integer,Integer> lastTuple;
         private int repeat;
-        //private int repeatCopy;
 
         /**
          * 调用构造函数后添加动画以及设定
@@ -442,7 +439,6 @@ public class Animation2D implements Texture2D {
             pauseProgress = progress;
         }
 
-
         @Override
         public TextureSetting getTextureSetting() {
             lastTuple = getCurrentTuple();
@@ -453,7 +449,6 @@ public class Animation2D implements Texture2D {
         @Override
         public void pause() {
             this.pauseProgress = getProgress();
-            //this.pauseNanoTime = System.nanoTime();
             this.statusCode = TextureControlCode.PAUSE;
         }
 

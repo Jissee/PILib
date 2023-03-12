@@ -181,7 +181,6 @@ public class VideoResource implements Texture2D {
         baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
         pauseProgress = progress;
     }
-
     public VideoResource setTextureSetting(TextureSetting setting) {
         this.textureSetting = setting;
         return this;

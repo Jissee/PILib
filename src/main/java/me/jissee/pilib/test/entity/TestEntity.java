@@ -106,9 +106,9 @@ public class TestEntity extends Mob implements Renderable2D {
     public Animation2D prepareAnimation3(){
         return new Animation2D(-1,toNanoInterval(1),TextureControlCode.PLAYING,
                 new TextureSetting(1.92f,1.08f),
-                RenderSetting.PERPENDICULAR_SINGLE)
-                .addTexture(new ResourceLocation(MODID, "textures/entity/png_t.png"))
-                .addTexture(new ResourceLocation(MODID, "textures/entity/png.png"));
+                RenderSetting.PERPENDICULAR_DOUBLE)
+                .addTexture(new ResourceLocation(MODID, "textures/entity/png_t.png"),new ResourceLocation(MODID, "textures/entity/png_t.png"))
+                .addTexture(new ResourceLocation(MODID, "textures/entity/png.png"),new ResourceLocation(MODID, "textures/entity/png.png"));
     }
     public Animation2D.Combined prepareCombined4(){
         return new Animation2D.Combined(TextureControlCode.PLAYING)
