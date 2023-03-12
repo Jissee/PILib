@@ -3,7 +3,7 @@ package me.jissee.pilib.resource;
 import java.util.HashMap;
 
 public class RemapUtil {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final HashMap<String, String> mapping = new HashMap<>();
     static{
         mapping.put("loaded"           , "f_120219_");
