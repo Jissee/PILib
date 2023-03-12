@@ -6,20 +6,17 @@ import com.mojang.math.Quaternion;
 import com.mojang.math.Vector3f;
 import me.jissee.pilib.resource.Texture2D;
 import me.jissee.pilib.resource.Texture2DManager;
+import me.jissee.pilib.resource.TextureSetting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.scores.Team;
 
 /**
  * 二维渲染器<br/><br/> 
@@ -32,11 +29,6 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
     private static final float textureSizeY = 100;
     private static final float offsetX = -50;
     private static final float offsetY = -50;
-    //private float textureScaleX = 1;
-    //private float textureScaleY = 1;
-    private float entityHeight = 1;
-    private boolean useRendererSettings = false;
-    private RenderSetting setting;
 
     protected Renderer2D(EntityRendererProvider.Context pContext) {
         super(pContext);
@@ -46,24 +38,37 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
     @Override
     public void render(T pEntity, float pEntityYaw, float pPartialTick, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
         super.render(pEntity, pEntityYaw, pPartialTick, pPoseStack, pBuffer, pPackedLight);
+
+        Texture2DManager manager = pEntity.getTexture2DManager();
+        if(Minecraft.getInstance().isPaused()){
+            if(!manager.isPaused()){
+                manager.autoPause();
+            }
+        }else{
+            if(manager.isPaused() && manager.isAutoPause()){
+                manager.autoResume();
+            }
+        }
         pEntityYaw = angleAdjust2PI(pEntityYaw);
         float pEntityNormal = (float) (-pEntityYaw + Math.PI / 2);
-        Texture2DManager manager = pEntity.getTexture2DManager();
+
         Texture2D texture2D = manager.getTextureSet();
+        ResourceLocation front = texture2D.getCurrentTextureFront();
+        ResourceLocation back = texture2D.getCurrentTextureBack();
 
-        RenderSetting.TexturePosition position;
-        boolean perpendicular;
-        RenderSetting.TextureSide side;
+        RenderSetting renderSetting = texture2D.getRenderSetting();
 
-        if(useRendererSettings){
-            position = setting.getPosition();
-            perpendicular = setting.isPerpendicular();
-            side = setting.getTextureSide();
-        }else{
-            position = texture2D.getRenderSetting().getPosition();
-            perpendicular = texture2D.getRenderSetting().isPerpendicular();
-            side = texture2D.getRenderSetting().getTextureSide();
-        }
+        RenderSetting.TexturePosition position = renderSetting.getPosition();
+        boolean perpendicular = renderSetting.isPerpendicular();
+        RenderSetting.TextureSide side = renderSetting.getTextureSide();
+
+        float entityHeight = pEntity.getBbHeight();
+
+        TextureSetting textureSetting = texture2D.getTextureSetting();
+        float sizeX = textureSetting.sizeX();
+        float sizeY = textureSetting.sizeY();
+        float toffsetX = textureSetting.offsetX() / sizeX * textureSizeX;
+        float toffsetY = textureSetting.offsetY() / sizeY * textureSizeY;
 
         Quaternion orientation = mc.getEntityRenderDispatcher().cameraOrientation();
 
@@ -86,134 +91,40 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
             Vec2 normalDirection = new Vec2((float) Math.cos(pEntityNormal), (float) Math.sin(pEntityNormal));
             float angleDot = posDelta.dot(normalDirection);
             if(angleDot > 0){
-                builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureFront()));
+                builder = pBuffer.getBuffer(RenderType.text(front));
             }else{
                 Vector3f vector3f = orientation.toYXZ();
                 orientation = Quaternion.fromYXZ((float) (vector3f.y() + Math.PI), 0, 0);
-                builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureBack()));
+                builder = pBuffer.getBuffer(RenderType.text(back));
             }
         }else{
-            builder = pBuffer.getBuffer(RenderType.text(texture2D.getCurrentTextureFront()));
+            builder = pBuffer.getBuffer(RenderType.text(front));
         }
-
-        if(pEntity instanceof LivingEntity pLivingEntity){
-            if (pLivingEntity.deathTime > 0) {
-                float f = ((float)pLivingEntity.deathTime + pPartialTick - 1.0F) / 20.0F * 1.6F;
-                f = Mth.sqrt(f);
-                if (f > 1.0F) {
-                    f = 1.0F;
-                }
-                pPoseStack.mulPose(Vector3f.ZP.rotationDegrees(f * this.getFlipDegrees(pEntity)));
-            }
-        }
-
 
         pPoseStack.pushPose();
         if(position == RenderSetting.TexturePosition.BOTTOM){
             pPoseStack.translate(0,0,0);
             pPoseStack.mulPose(orientation);
-            pPoseStack.scale(-texture2D.getScaleX() / textureSizeX,-texture2D.getScaleY() / textureSizeY,0);
+            pPoseStack.scale(-sizeX / textureSizeX,-sizeY / textureSizeY,0);
 
-            vertex(builder,pPoseStack, 0            + offsetX,0          ,0,0,1,255,pPackedLight);
-            vertex(builder,pPoseStack, textureSizeX + offsetX,0          ,0,1,1,255,pPackedLight);
-            vertex(builder,pPoseStack, textureSizeX + offsetX,-textureSizeY ,0,1,0,255,pPackedLight);
-            vertex(builder,pPoseStack, 0            + offsetX,-textureSizeY ,0,0,0,255,pPackedLight);
+            vertex(builder,pPoseStack, 0            + offsetX + toffsetX,0             - toffsetY,0,0,1,255,pPackedLight);
+            vertex(builder,pPoseStack, textureSizeX + offsetX + toffsetX,0             - toffsetY,0,1,1,255,pPackedLight);
+            vertex(builder,pPoseStack, textureSizeX + offsetX + toffsetX,-textureSizeY - toffsetY,0,1,0,255,pPackedLight);
+            vertex(builder,pPoseStack, 0            + offsetX + toffsetX,-textureSizeY - toffsetY,0,0,0,255,pPackedLight);
 
         }else {
-            pPoseStack.translate(0,entityHeight / 2,0);
+            pPoseStack.translate(0, entityHeight / 2,0);
             pPoseStack.mulPose(orientation);
-            pPoseStack.scale(-texture2D.getScaleX() / textureSizeX,-texture2D.getScaleY() / textureSizeY,0);
+            pPoseStack.scale(-sizeX / textureSizeX,-sizeY / textureSizeY,0);
 
-            vertex(builder,pPoseStack, 0            + offsetX,textureSizeY + offsetY,0,0,1,255,pPackedLight);
-            vertex(builder,pPoseStack, textureSizeX + offsetX,textureSizeY + offsetY,0,1,1,255,pPackedLight);
-            vertex(builder,pPoseStack, textureSizeX + offsetX,0            + offsetY,0,1,0,255,pPackedLight);
-            vertex(builder,pPoseStack, 0            + offsetX,0            + offsetY,0,0,0,255,pPackedLight);
+            vertex(builder,pPoseStack, 0            + offsetX + toffsetX,textureSizeY + offsetY - toffsetY,0,0,1,255,pPackedLight);
+            vertex(builder,pPoseStack, textureSizeX + offsetX + toffsetX,textureSizeY + offsetY - toffsetY,0,1,1,255,pPackedLight);
+            vertex(builder,pPoseStack, textureSizeX + offsetX + toffsetX,0            + offsetY - toffsetY,0,1,0,255,pPackedLight);
+            vertex(builder,pPoseStack, 0            + offsetX + toffsetX,0            + offsetY - toffsetY,0,0,0,255,pPackedLight);
         }
         pPoseStack.popPose();
     }
 
-    protected boolean shouldShowName(T pEntity) {
-        return shouldShowNameLivingEntity(pEntity) && (pEntity.shouldShowName() || pEntity.hasCustomName() && pEntity == this.entityRenderDispatcher.crosshairPickEntity);
-    }
-
-    protected boolean shouldShowNameLivingEntity(T pEntity) {
-        double d0 = this.entityRenderDispatcher.distanceToSqr(pEntity);
-        float f = pEntity.isDiscrete() ? 32.0F : 64.0F;
-        if (d0 >= (double)(f * f)) {
-            return false;
-        } else {
-            Minecraft minecraft = Minecraft.getInstance();
-            LocalPlayer localplayer = minecraft.player;
-            boolean flag = !pEntity.isInvisibleTo(localplayer);
-            if (pEntity != localplayer) {
-                Team team = pEntity.getTeam();
-                Team team1 = localplayer.getTeam();
-                if (team != null) {
-                    Team.Visibility team$visibility = team.getNameTagVisibility();
-                    switch (team$visibility) {
-                        case ALWAYS:
-                            return flag;
-                        case NEVER:
-                            return false;
-                        case HIDE_FOR_OTHER_TEAMS:
-                            return team1 == null ? flag : team.isAlliedTo(team1) && (team.canSeeFriendlyInvisibles() || flag);
-                        case HIDE_FOR_OWN_TEAM:
-                            return team1 == null ? flag : !team.isAlliedTo(team1) && flag;
-                        default:
-                            return true;
-                    }
-                }
-            }
-
-            return Minecraft.renderNames() && pEntity != minecraft.getCameraEntity() && flag && !pEntity.isVehicle();
-        }
-    }
-
-    /**
-     * 渲染器忽视材质原始大小，渲染时会将其拉伸至指定大小（单位：方块）<br/>
-     * The renderer will ignore the origin size of the texture and resize it to the assigned size. Unit: block(s)
-     * @param x 水平长度 Width
-     * @param y 垂直高度 Height
-     */
-    /*
-    public Renderer2D<T> setTextureScale(float x, float y){
-        textureScaleX = x;
-        textureScaleY = y;
-        return this;
-    }*/
-
-    /**
-     * 设定实体的大小，用来确定实体中心点的位置<br/>
-     * Set the height of the entity, which is used to determine the center of the entity.
-     */
-
-    public Renderer2D<T> setEntityHeight(float height){
-        entityHeight = height;
-        return this;
-    }
-
-    /**
-     * 调用后所有此渲染器渲染的实体均会采用相同的设定<br/>
-     * Any entities that rendered by this renderer will use the same setting.
-     */
-    public Renderer2D<T> useRendererSettings(RenderSetting setting){
-        this.setting = setting;
-        this.useRendererSettings = true;
-        return this;
-    }
-
-    /**
-     * 调用后所有此渲染器渲染的实体均会采用其二维材质的设定<br/>
-     * Any entities that rendered by this renderer will use the settings from its own textures.
-     */
-    public Renderer2D<T> useTexturesSettings(){
-        this.useRendererSettings = false;
-        return this;
-    }
-
-    protected float getFlipDegrees(T pLivingEntity) {
-        return 90.0F;
-    }
 
 
     private static void vertex(VertexConsumer builder, PoseStack matrixStack, float x, float y, float z, float u, float v, int alpha, int light) {
@@ -263,6 +174,5 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
     private static float angleAdjustNPPI(float f){
         return (float) (angleAdjust2PI(f) - Math.PI);
     }
-
 
 }

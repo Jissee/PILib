@@ -7,7 +7,8 @@ import net.minecraft.util.Tuple;
 import java.util.ArrayList;
 import java.util.List;
 
-import static me.jissee.pilib.resource.ResourceUtil.toFPS;
+import static me.jissee.pilib.resource.LocalResourceUtil.toFPS;
+
 
 /**
  * 二维动画类由一组描述实体外观的静态图片组成。<br/><br/>
@@ -17,19 +18,18 @@ public class Animation2D implements Texture2D {
     private final List<ResourceLocation> textures = new ArrayList<>();
     private final List<ResourceLocation> texturesBack = new ArrayList<>();
     private int repeat;
-    private int repeatCopy;
     private int texturesCount;
     private double fps = 0;
     private long nanoInterval = 0;
-    private float scaleX;
-    private float scaleY;
-    private RenderSetting setting;
-    private Texture2DManager.ControlCode statusCode;
+    private RenderSetting renderSetting;
+    private TextureSetting textureSetting;
+    private TextureControlCode statusCode;
     private int previousIndex = 0;
     private long baseNanoTime = -1;
-    private long pauseNanoTime;
+    //private long pauseNanoTime;
+    private int pauseProgress;
     private long totalTime = 0;
-    private int pauseIndex;
+    private int pauseIndex = -1;
 
 
     /**
@@ -42,16 +42,15 @@ public class Animation2D implements Texture2D {
      * @param resourceName     带有占位符的材质文件名，例如“textures/entity/pic_%i.png” The resource name with the placeholder. For example, “textures/entity/pic_%i.png”
      * @param startIndex       占位符开始的下表，例如 1 The start number of the index. For example, 1
      * @param endIndex         占位符结束的下表，例如 100 The end number of the index. For example, 100
-     * @param scaleX           渲染器忽视材质原始大小，渲染时会将其拉伸至指定大小（单位：方块） The renderer will ignore the origin size of the texture and resize it to the assigned size. Unit: block(s)
-     * @param scaleY
      * @param nanoInterval     每两帧之间间隔的时间，用纳秒表示，例如 2_000 （即2毫秒） The interval between two frames in nanoseconds.For example, 2_000 (2 milliseconds)
      * @param repeat           动画重复的次数，-1表示循环播放 Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param setting          渲染设置 The {@link RenderSetting} of this Animation.
+     * @param textureSetting   材质设置 The {@link TextureSetting} of this Animation.
+     * @param renderSetting    渲染设置 The {@link RenderSetting} of this Animation.
      * @return
      */
 
-    public static Animation2D createSingleSide(String modId, String indexPlaceholder, String resourceName, int startIndex, int endIndex,float scaleX, float scaleY, long nanoInterval, int repeat, RenderSetting setting){
-        Animation2D anim = new Animation2D(repeat,nanoInterval,setting).setTextureScale(scaleX,scaleY);
+    public static Animation2D createSingleSide(String modId, String indexPlaceholder, String resourceName, int startIndex, int endIndex, long nanoInterval, int repeat, TextureControlCode defaultStatus, TextureSetting textureSetting, RenderSetting renderSetting){
+        Animation2D anim = new Animation2D(repeat, nanoInterval, defaultStatus, textureSetting, renderSetting);
         String tmp;
         for(int i = startIndex; i <= endIndex; i++){
             tmp = resourceName.replaceAll(indexPlaceholder, "" + i);
@@ -73,16 +72,15 @@ public class Animation2D implements Texture2D {
      * @param backResourceName  带有占位符的反面材质文件名，例如“textures/entity/pic_back_%i.png” The resource name with the placeholder of the back texture. For example, “textures/entity/pic_back_%i.png”
      * @param startIndex        占位符开始的下表，例如 1 The start number of the index. For example, 1
      * @param endIndex          占位符结束的下表，例如 100 The end number of the index. For example, 100
-     * @param scaleX           渲染器忽视材质原始大小，渲染时会将其拉伸至指定大小（单位：方块） The renderer will ignore the origin size of the texture and resize it to the assigned size. Unit: block(s)
-     * @param scaleY
      * @param nanoInterval      每两帧之间间隔的时间，用纳秒表示，例如 2_000 （即2毫秒） The interval between two frames in nanoseconds.For example, 2_000 (2 milliseconds)
      * @param repeat            动画重复的次数，-1表示循环播放 Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param setting           渲染设置 The {@link RenderSetting} of this Animation.
+     * @param textureSetting    材质设置 The {@link TextureSetting} of this Animation.
+     * @param renderSetting     渲染设置 The {@link RenderSetting} of this Animation.
      * @return
      */
 
-    public static Animation2D createDoubleSide(String modId, String indexPlaceholder, String frontResourceName, String backResourceName, int startIndex, int endIndex,float scaleX, float scaleY, long nanoInterval, int repeat, RenderSetting setting){
-        Animation2D anim = new Animation2D(repeat,nanoInterval,setting).setTextureScale(scaleX,scaleY);
+    public static Animation2D createDoubleSide(String modId, String indexPlaceholder, String frontResourceName, String backResourceName, int startIndex, int endIndex, long nanoInterval, int repeat, TextureControlCode defaultStatus, TextureSetting textureSetting, RenderSetting renderSetting){
+        Animation2D anim = new Animation2D(repeat,nanoInterval,defaultStatus,textureSetting,renderSetting);
         String tmp1, tmp2;
         for(int i = startIndex; i <= endIndex; i++){
             tmp1 = frontResourceName.replaceAll(indexPlaceholder, String.valueOf(i));
@@ -100,16 +98,18 @@ public class Animation2D implements Texture2D {
      * @param anim1   第一段动画 The first animation.
      * @param anim2   第二段动画 The second animation.
      * @param repeat  动画重复的次数，-1表示循环播放 Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param setting 整个动画的渲染设置 The {@link RenderSetting} of the whole Animation.
+     * @param renderSetting 整个动画的渲染设置 The {@link RenderSetting} of the whole Animation.
      */
-    public static Animation2D combine(Animation2D anim1, Animation2D anim2, int repeat, RenderSetting setting){
+    public static Animation2D simpleCombine(Animation2D anim1, Animation2D anim2, int repeat, TextureControlCode defaultStatus, RenderSetting renderSetting){
         long interval = anim1.nanoInterval;
         long nano1 = anim1.nanoInterval;
         long nano2 = anim2.nanoInterval;
-        if(nano1 != nano2){
+        TextureSetting tx1 = anim1.textureSetting;
+        TextureSetting tx2 = anim2.textureSetting;
+        if(nano1 != nano2 || !tx1.equals(tx2)){
             throw new IllegalArgumentException("For Animations with different properties, use Combined instead.");
         }
-        Animation2D anim = new Animation2D(repeat, interval, setting);
+        Animation2D anim = new Animation2D(repeat, interval,defaultStatus, tx1, renderSetting);
         int r = 0;
         r = anim1.repeat > 1 ? anim1.repeat : 1;
         for(; r > 0; r--){
@@ -127,33 +127,23 @@ public class Animation2D implements Texture2D {
     }
 
 
+
     /**
      * 创建空的动画，按顺序添加材质。
      * Create new empty Animation2D and add textures sequentially.
-     * @param repeat        动画重复的次数，-1表示循环播放 Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param nanoInterval  每两帧之间间隔的时间，用纳秒表示，例如 2_000 （即2毫秒） The interval between two frames in nanoseconds.For example, 2_000 (2 milliseconds)
-     * @param setting       渲染设置 The {@link RenderSetting} of this Animation.
-     */
-    public Animation2D(int repeat, long nanoInterval, RenderSetting setting){
-        this(repeat,1.0f,1.0f,nanoInterval,setting);
-    }
-    /**
-     * 创建空的动画，按顺序添加材质。
-     * Create new empty Animation2D and add textures sequentially.
-     * @param repeat        动画重复的次数，-1表示循环播放 Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
-     * @param scaleX        渲染器忽视材质原始大小，渲染时会将其拉伸至指定大小（单位：方块） The renderer will ignore the origin size of the texture and resize it to the assigned size. Unit: block(s)
-     * @param scaleY
-     * @param nanoInterval  每两帧之间间隔的时间，用纳秒表示，例如 2_000 （即2毫秒） The interval between two frames in nanoseconds.For example, 2_000 (2 milliseconds)
-     * @param setting       渲染设置 The {@link RenderSetting} of this Animation.
+     * @param repeat         动画重复的次数，-1表示循环播放 Set the times should the animation repeat. Set -1 if the animation should repeat for infinite times.
+     * @param nanoInterval   每两帧之间间隔的时间，用纳秒表示，例如 2_000 （即2毫秒） The interval between two frames in nanoseconds.For example, 2_000 (2 milliseconds)
+     * @param textureSetting 材质设置 The {@link TextureSetting} of this Animation.
+     * @param renderSetting  渲染设置 The {@link RenderSetting} of this Animation.
      */
 
-    public Animation2D(int repeat,float scaleX, float scaleY, long nanoInterval, RenderSetting setting){
+    public Animation2D(int repeat, long nanoInterval, TextureControlCode defaultStatus, TextureSetting textureSetting, RenderSetting renderSetting){
         this.repeat = repeat;
-        this.scaleX = scaleX;
-        this.scaleY = scaleY;
         this.nanoInterval = nanoInterval;
         this.fps = toFPS(nanoInterval);
-        this.setting = setting;
+        this.statusCode = defaultStatus;
+        this.textureSetting = textureSetting;
+        this.renderSetting = renderSetting;
     }
 
     /**
@@ -182,7 +172,7 @@ public class Animation2D implements Texture2D {
 
     @Override
     public ResourceLocation getCurrentTextureFront(){
-        if(statusCode == Texture2DManager.ControlCode.PAUSE){
+        if(statusCode == TextureControlCode.PAUSE){
             return textures.get(previousIndex);
         }
         previousIndex = getIndex();
@@ -191,94 +181,101 @@ public class Animation2D implements Texture2D {
 
     @Override
     public ResourceLocation getCurrentTextureBack(){
-        if(statusCode == Texture2DManager.ControlCode.PAUSE){
+        if(statusCode == TextureControlCode.PAUSE){
             return texturesBack.get(previousIndex);
         }
         previousIndex = getIndex();
         return texturesBack.get(previousIndex);
     }
 
-    public void setRenderSetting(RenderSetting setting) {
-        this.setting = setting;
-    }
-
-    @Override
-    public RenderSetting getRenderSetting() {
-        return setting;
-    }
-
-    /**
-     * 渲染器忽视材质原始大小，渲染时会将其拉伸至指定大小（单位：方块）<br/>
-     * The renderer will ignore the origin size of the texture and resize it to the assigned size. Unit: block(s)
-     *
-     * @param x 水平长度 Width
-     * @param y 垂直高度 Height
-     */
-    public Animation2D setTextureScale(float x, float y){
-        scaleX = x;
-        scaleY = y;
+    public Animation2D setRenderSetting(RenderSetting setting) {
+        this.renderSetting = setting;
         return this;
     }
-
     @Override
-    public float getScaleX() {
-        return scaleX;
+    public RenderSetting getRenderSetting() {
+        return renderSetting;
     }
 
     @Override
-    public float getScaleY() {
-        return scaleY;
+    public TextureControlCode getStatusCode() {
+        return statusCode;
     }
 
-    public int getIndex(){
-        if(statusCode == Texture2DManager.ControlCode.PAUSE){
+    @Override
+    public void setStatusCode(TextureControlCode code) {
+        this.statusCode = code;
+    }
+
+    @Override
+    public int getProgress() {
+        if(statusCode == TextureControlCode.PAUSE){
+            return pauseProgress;
+        }else{
+            long diff = System.nanoTime() - baseNanoTime;
+            return (int)((double)diff / (double)totalTime * MAX_PROGRESS);
+        }
+    }
+
+    @Override
+    public void setProgress(int progress) {
+        if(progress > MAX_PROGRESS) progress = MAX_PROGRESS;
+        baseNanoTime = System.nanoTime();
+        baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
+        pauseProgress = progress;
+    }
+
+
+    public Animation2D setTextureSetting(TextureSetting setting) {
+        this.textureSetting = setting;
+        return this;
+    }
+    @Override
+    public TextureSetting getTextureSetting() {
+        return textureSetting;
+    }
+    public synchronized int getIndex(){
+        if(statusCode == TextureControlCode.PAUSE && pauseIndex != -1){
             return pauseIndex;
         }
         long thisNanoTime = System.nanoTime();
         if(baseNanoTime == -1){
             baseNanoTime = thisNanoTime;
+            return 0;
         }
         long diff = thisNanoTime - baseNanoTime;
 
-        while(diff > totalTime){
-            diff -= totalTime;
-            baseNanoTime += totalTime;
+        long pass = diff / totalTime;
+
+        if(repeat != -1 && pass >= repeat){
+            return texturesCount - 1;
         }
 
-        long index =  (diff / nanoInterval);
-        if(index >= texturesCount){
-            if(repeat == -1 || repeatCopy > 0){
-                if(repeatCopy > 0){
-                    repeatCopy--;
-                }
-                index = index % texturesCount;
-            }else{
-                index = texturesCount - 1;
-            }
-        }
+        diff = diff - pass * totalTime;
+
+        long index = diff / nanoInterval;
+        index = index % texturesCount;
+
         return pauseIndex = (int) index;
     }
 
     @Override
-    public void startOrReset() {
-        this.statusCode = Texture2DManager.ControlCode.START_OR_RESET;
-        baseNanoTime = -1;
-        repeatCopy = repeat;
-    }
-
-    @Override
     public void pause() {
-        this.pauseNanoTime = System.nanoTime();
-        this.statusCode = Texture2DManager.ControlCode.PAUSE;
+        this.pauseProgress = getProgress();
+        this.statusCode = TextureControlCode.PAUSE;
     }
 
     @Override
     public void resume() {
-        if(statusCode == Texture2DManager.ControlCode.PAUSE){
-            long diff = System.nanoTime() - pauseNanoTime;
-            baseNanoTime += diff;
-            this.statusCode = Texture2DManager.ControlCode.RESUME;
+        if(statusCode == TextureControlCode.PAUSE){
+            setProgress(pauseProgress);
+            this.statusCode = TextureControlCode.PLAYING;
         }
+    }
+
+    @Override
+    public void tick() {
+        getIndex();
     }
 
     public Animation2D setRepeat(int repeat){
@@ -296,18 +293,20 @@ public class Animation2D implements Texture2D {
         private final List<Integer> textureCounts = new ArrayList<>();
         private final List<Integer> repeats = new ArrayList<>();
         private long totalTime;
-        private Texture2DManager.ControlCode statusCode;
+        private TextureControlCode statusCode;
         private long baseNanoTime = -1;
-        private long pauseNanoTime;
+        //private long pauseNanoTime;
+        private int pauseProgress;
         private Tuple<Integer,Integer> lastTuple;
         private int repeat;
-        private int repeatCopy;
+        //private int repeatCopy;
 
         /**
          * 调用构造函数后添加动画以及设定
          * Call constructor and add animations and set the properties
          */
-        public Combined() {
+        public Combined(TextureControlCode defaultStatus) {
+            statusCode = defaultStatus;
             totalTime = 0;
         }
 
@@ -333,8 +332,7 @@ public class Animation2D implements Texture2D {
          * Add single frame texture by sequence with the time it lasts
          */
         public Combined add(SingleTexture2D tex, long nanoTime){
-            Animation2D anim = new Animation2D(1,nanoTime,tex.getRenderSetting())
-                    .setTextureScale(tex.getScaleX(),tex.getScaleY())
+            Animation2D anim = new Animation2D(1,nanoTime,TextureControlCode.PLAYING, tex.getTextureSetting(),tex.getRenderSetting())
                     .addTexture(tex.getCurrentTextureFront(),tex.getCurrentTextureBack());
             return add(anim);
         }
@@ -348,26 +346,27 @@ public class Animation2D implements Texture2D {
             return this;
         }
 
-        private Tuple<Integer, Integer> getCurrentTuple(){
-            if(statusCode == Texture2DManager.ControlCode.PAUSE){
+        private synchronized Tuple<Integer, Integer> getCurrentTuple(){
+            if(statusCode == TextureControlCode.PAUSE && lastTuple != null){
                 return lastTuple;
             }
             if(baseNanoTime == -1){
                 baseNanoTime = System.nanoTime();
-                repeatCopy = repeat;
+                //repeatCopy = repeat;
                 return lastTuple = new Tuple<>(0,0);
             }
             long timeNow = System.nanoTime();
             long diff = timeNow - baseNanoTime;
 
-            while(diff > totalTime){
-                diff -= totalTime;
-                baseNanoTime += totalTime;
-                repeatCopy --;
+            long pass = diff / totalTime;
+
+            if(repeat != -1 && pass >= repeat){
+                int i = animList.size() - 1;
+                return new Tuple<>(i, textureCounts.get(i) - 1);
             }
-            if(repeatCopy <= 0 && repeat != -1){
-                return lastTuple;
-            }
+
+            diff = diff - pass * totalTime;
+
             int animIndex;
             int thisRepeat;
             long thisNanoInterval;
@@ -411,42 +410,64 @@ public class Animation2D implements Texture2D {
 
         @Override
         public RenderSetting getRenderSetting() {
-            Tuple<Integer, Integer> t = getCurrentTuple();
+            Tuple<Integer,Integer> t = getCurrentTuple();
             return animList.get(t.getA()).getRenderSetting();
         }
 
         @Override
-        public float getScaleX() {
-            Tuple<Integer, Integer> t = getCurrentTuple();
-            return animList.get(t.getA()).scaleX;
+        public TextureControlCode getStatusCode() {
+            return statusCode;
         }
 
         @Override
-        public float getScaleY() {
-            Tuple<Integer, Integer> t = getCurrentTuple();
-            return animList.get(t.getA()).scaleY;
+        public void setStatusCode(TextureControlCode code) {
+            this.statusCode = code;
         }
 
         @Override
-        public void startOrReset() {
-            this.statusCode = Texture2DManager.ControlCode.START_OR_RESET;
-            baseNanoTime = -1;
+        public int getProgress() {
+            if(statusCode == TextureControlCode.PAUSE){
+                return pauseProgress;
+            }else{
+                long diff = System.nanoTime() - baseNanoTime;
+                return (int)((double)diff / (double)totalTime * MAX_PROGRESS);
+            }
         }
+
+        @Override
+        public void setProgress(int progress) {
+            if(progress > MAX_PROGRESS) progress = MAX_PROGRESS;
+            baseNanoTime = System.nanoTime();
+            baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
+            pauseProgress = progress;
+        }
+
+
+        @Override
+        public TextureSetting getTextureSetting() {
+            lastTuple = getCurrentTuple();
+            return animList.get(lastTuple.getA()).getTextureSetting();
+        }
+
 
         @Override
         public void pause() {
-            this.pauseNanoTime = System.nanoTime();
-            this.statusCode = Texture2DManager.ControlCode.PAUSE;
+            this.pauseProgress = getProgress();
+            //this.pauseNanoTime = System.nanoTime();
+            this.statusCode = TextureControlCode.PAUSE;
         }
 
         @Override
         public void resume() {
-            if(statusCode == Texture2DManager.ControlCode.PAUSE){
-                long diff = System.nanoTime() - pauseNanoTime;
-                baseNanoTime += diff;
-                this.statusCode = Texture2DManager.ControlCode.RESUME;
+            if(statusCode == TextureControlCode.PAUSE){
+                setProgress(pauseProgress);
+                this.statusCode = TextureControlCode.PLAYING;
             }
         }
-    }
 
+        @Override
+        public void tick() {
+            getCurrentTuple();
+        }
+    }
 }

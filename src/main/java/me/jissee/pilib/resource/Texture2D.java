@@ -2,12 +2,14 @@ package me.jissee.pilib.resource;
 
 import me.jissee.pilib.render.RenderSetting;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.Range;
 
 /**
  * 二维材质需要实现此接口<br/>
  * Any 2D textures need to implement this interface.
  */
 public interface Texture2D {
+    int MAX_PROGRESS = 10_0000_0000;
     /**
      * 获取当前的正面材质
      */
@@ -17,29 +19,41 @@ public interface Texture2D {
      */
     ResourceLocation getCurrentTextureBack();
     /**
+     * 获取材质设置
+     */
+    TextureSetting getTextureSetting();
+    /**
      * 获取渲染设置
      */
     RenderSetting getRenderSetting();
     /**
-     * 获取材质的X尺寸（单位：方块）
+     * 获取当前状态
      */
-    float getScaleX();
+    TextureControlCode getStatusCode();
     /**
-     * 获取材质的Y尺寸（单位：方块）
+     * 设置新状态
      */
-    float getScaleY();
+    void setStatusCode(TextureControlCode code);
     /**
-     * 开始播放或重置
+     * 获取当前播放进度，范围从0（表示未开始播放）到10亿（表示已经到达尾部）
      */
-    void startOrReset();
+    @Range(from = 0,to = MAX_PROGRESS)
+    int getProgress();
+    /**
+     * 设置当前材质播放进度
+     */
+    void setProgress(@Range(from = 0,to = MAX_PROGRESS) int progress);
     /**
      * 暂停播放
      */
     void pause();
     /**
-     * 恢复播放
+     * 恢复或开始播放
      */
     void resume();
-
-
+    /**
+     * 在没有渲染的情况下保持材质动画的播放
+     * Keep texture playing while not rendering
+     */
+    void tick();
 }
