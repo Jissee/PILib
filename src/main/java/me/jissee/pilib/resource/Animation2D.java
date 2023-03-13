@@ -7,8 +7,6 @@ import net.minecraft.util.Tuple;
 import java.util.ArrayList;
 import java.util.List;
 
-import static me.jissee.pilib.resource.LocalResourceUtil.toFPS;
-
 
 /**
  * 二维动画类由一组描述实体外观的静态图片组成。<br/><br/>
