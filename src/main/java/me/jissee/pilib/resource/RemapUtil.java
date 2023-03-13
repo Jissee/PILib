@@ -1,11 +1,21 @@
 package me.jissee.pilib.resource;
 
+import net.minecraft.client.sounds.SoundEngine;
+
 import java.util.HashMap;
 
 public class RemapUtil {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG;
     private static final HashMap<String, String> mapping = new HashMap<>();
     static{
+        boolean test;
+        try {
+            SoundEngine.class.getDeclaredField("loaded");
+            test = true;
+        } catch (NoSuchFieldException e) {
+            test = false;
+        }
+        DEBUG = test;
         mapping.put("loaded"           , "f_120219_");
         mapping.put("soundBuffers"     , "f_120222_");
         mapping.put("channelAccess"    , "f_120224_");
