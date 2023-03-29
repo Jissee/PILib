@@ -9,13 +9,13 @@ PILib is a Minecraft library mod that provides a simple way to create your 2D en
 
 Latest versions
 
-| Minecraft |   Lib  |
-|:---------:|:------:|
-|  1.19.3   | 3.14.1 |
-|  1.19.2   | 3.14.1 |
+| Minecraft |   Lib   |
+|:---------:|:-------:|
+|  1.19.3   | 3.14.15 |
+|  1.19.2   | 3.14.15 |
 
 Currently, all latest release versions can be found in release page on the right. You just need to download them and put them in your "mods" folder.
-But note that this mod does not provide any contents. It only provides APIs for other mods who provide new contents.
+But note that this mod does not provide any contents. It only provides APIs for other mods which provide new contents.
 
 <li> How to implement in my project? (For development purpose)</li>
 
@@ -46,6 +46,6 @@ Legacy version development and fabric development are also needed.
 
 <li> ADDITIONAL LICENSE </li>
 
-ANY PARTS OF THIS PROJECT ARE PROHIBITED FROM BEING USED ON NETEASE VERSION
+ANY PARTS OF THIS PROJECT ARE PROHIBITED FROM BEING USED ON NETEASE VERSION.
 
 </ol>
