@@ -3,14 +3,23 @@ package me.jissee.pilib.network;
 import me.jissee.pilib.resource.TextureControlCode;
 import net.minecraft.network.FriendlyByteBuf;
 
+import java.util.Objects;
+
 /**
  * 实体动画同步数据记录，表示对某个实体进行了操作
- * @param entityId
- * @param ptr
- * @param code
- * @param progress
  */
-public record SyncAnimData(int entityId, int ptr, TextureControlCode code, int progress) {
+public final class SyncAnimData {
+    private final int entityId;
+    private final int ptr;
+    private final TextureControlCode code;
+    private final int progress;
+
+    public SyncAnimData(int entityId, int ptr, TextureControlCode code, int progress) {
+        this.entityId = entityId;
+        this.ptr = ptr;
+        this.code = code;
+        this.progress = progress;
+    }
 
     public static void writeToBuf(FriendlyByteBuf buf, SyncAnimData data) {
         buf.writeInt(data.entityId);
@@ -27,4 +36,46 @@ public record SyncAnimData(int entityId, int ptr, TextureControlCode code, int p
                 buf.readInt()
         );
     }
+
+    public int entityId() {
+        return entityId;
+    }
+
+    public int ptr() {
+        return ptr;
+    }
+
+    public TextureControlCode code() {
+        return code;
+    }
+
+    public int progress() {
+        return progress;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) return true;
+        if (obj == null || obj.getClass() != this.getClass()) return false;
+        var that = (SyncAnimData) obj;
+        return this.entityId == that.entityId &&
+                this.ptr == that.ptr &&
+                Objects.equals(this.code, that.code) &&
+                this.progress == that.progress;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(entityId, ptr, code, progress);
+    }
+
+    @Override
+    public String toString() {
+        return "SyncAnimData[" +
+                "entityId=" + entityId + ", " +
+                "ptr=" + ptr + ", " +
+                "code=" + code + ", " +
+                "progress=" + progress + ']';
+    }
+
 }
