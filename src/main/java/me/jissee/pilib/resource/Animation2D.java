@@ -220,6 +220,7 @@ public class Animation2D implements Texture2D {
         baseNanoTime = System.nanoTime();
         baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
         pauseProgress = progress;
+        previousIndex = getIndex();
     }
 
     public Animation2D setTextureSetting(TextureSetting setting) {
@@ -258,8 +259,10 @@ public class Animation2D implements Texture2D {
 
     @Override
     public void pause() {
-        this.pauseProgress = getProgress();
-        this.statusCode = TextureControlCode.PAUSE;
+        if(this.statusCode != TextureControlCode.PAUSE){
+            this.pauseProgress = getProgress();
+            this.statusCode = TextureControlCode.PAUSE;
+        }
     }
 
     @Override
@@ -268,11 +271,6 @@ public class Animation2D implements Texture2D {
             setProgress(pauseProgress);
             this.statusCode = TextureControlCode.PLAYING;
         }
-    }
-
-    @Override
-    public void tick() {
-        getIndex();
     }
 
     public Animation2D setRepeat(int repeat){
@@ -435,6 +433,7 @@ public class Animation2D implements Texture2D {
             baseNanoTime = System.nanoTime();
             baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
             pauseProgress = progress;
+            lastTuple = getCurrentTuple();
         }
 
         @Override
@@ -446,8 +445,10 @@ public class Animation2D implements Texture2D {
 
         @Override
         public void pause() {
-            this.pauseProgress = getProgress();
-            this.statusCode = TextureControlCode.PAUSE;
+            if(this.statusCode != TextureControlCode.PAUSE){
+                this.pauseProgress = getProgress();
+                this.statusCode = TextureControlCode.PAUSE;
+            }
         }
 
         @Override
@@ -456,11 +457,6 @@ public class Animation2D implements Texture2D {
                 setProgress(pauseProgress);
                 this.statusCode = TextureControlCode.PLAYING;
             }
-        }
-
-        @Override
-        public void tick() {
-            getCurrentTuple();
         }
     }
 }

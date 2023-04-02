@@ -5,47 +5,39 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Supplier;
 
-public class DataSyncPacket {
-    public final UUID senderId;
-    public final SyncAnimData data;
+public class AnimSyncPacket {
+    public final AnimSyncData data;
 
-    public DataSyncPacket(FriendlyByteBuf buf){
-        this.senderId = buf.readUUID();
-        this.data = buf.readOptional(SyncAnimData::readFromBuf).get();
+    public AnimSyncPacket(FriendlyByteBuf buf){
+        this.data = buf.readOptional(AnimSyncData::readFromBuf).get();
     }
-    public DataSyncPacket(UUID senderId, SyncAnimData data){
-        this.senderId = senderId;
+    public AnimSyncPacket(AnimSyncData data){
         this.data = data;
     }
     public void encode(FriendlyByteBuf buf){
-        buf.writeUUID(senderId);
-        buf.writeOptional(Optional.of(data), SyncAnimData::writeToBuf);
+        buf.writeOptional(Optional.of(data), AnimSyncData::writeToBuf);
     }
 
     public void handle(Supplier<NetworkEvent.Context> ctx){
         ctx.get().enqueueWork(()->{
-            if(FMLLoader.getDist().isClient()){
+            if(ctx.get().getDirection() == NetworkDirection.PLAY_TO_CLIENT){
                 Minecraft mc = Minecraft.getInstance();
-                UUID uuid = mc.player.getUUID();
-                if(!uuid.equals(senderId)){
-                    Entity entity = mc.level.getEntity(data.entityId());
-                    if(entity instanceof Renderable2D entity2D){
-                        entity2D.getTexture2DManager().onSyncData(this.data);
-                    }
+                Entity entity = mc.level.getEntity(data.entityId());
+                if(entity instanceof Renderable2D entity2D){
+                    entity2D.getTexture2DManager().onAnimSync(this.data);
                 }
             }else{
                 ServerLevel serverLevel = (ServerLevel) ctx.get().getSender().level;
                 Entity entity = serverLevel.getEntity(data.entityId());
                 if(entity instanceof Renderable2D entity2D){
-                    entity2D.getTexture2DManager().onSyncData(this.data);
+                    entity2D.getTexture2DManager().onAnimSync(this.data);
                 }
                 NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), this);
             }

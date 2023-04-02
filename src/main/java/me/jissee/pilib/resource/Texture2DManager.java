@@ -1,12 +1,12 @@
 package me.jissee.pilib.resource;
 
-import me.jissee.pilib.network.DataRenewPacket;
-import me.jissee.pilib.network.DataSyncPacket;
-import me.jissee.pilib.network.NetworkHandler;
-import me.jissee.pilib.network.SyncAnimData;
+import me.jissee.pilib.network.*;
 import me.jissee.pilib.render.Renderable2D;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -14,13 +14,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * 在二维实体内使用，被渲染器调用来管理材质<br/><br/>
  * Used in 2D entities to manage texture sets and called by renderer.
  */
 public class Texture2DManager implements Iterable<Texture2D> {
-    private static final ArrayList<Texture2DManager> managers = new ArrayList<>();
     private final ArrayList<Texture2D> textureSets = new ArrayList<>();
     private int texturePtr;
     private final Entity target;
@@ -30,35 +30,52 @@ public class Texture2DManager implements Iterable<Texture2D> {
      * 用于客户端接收新数据
      * Client accept new data from server
      */
-    public static void onRenewData(DataRenewPacket packet){
-        HashMap<Integer, SyncAnimData> map = new HashMap<>();
-        for(SyncAnimData data : packet){
-            map.put(data.entityId(), data);
+    public static void onManagerRenew(T2DMRenewPacket packet){
+        HashMap<Integer, Texture2DManager.Record> map = new HashMap<>();
+        for(Texture2DManager.Record managerRecord : packet){
+            map.put(managerRecord.entityId, managerRecord);
         }
-        SyncAnimData data;
-        Texture2D t;
+        int eid;
+        Texture2DManager.Record updatingSource;
 
-        for(Texture2DManager manager : managers){
-            data = map.get(manager.getEntityId());
-            if(data != null){
-                manager.texturePtr = data.ptr();
-                t = manager.textureSets.get(data.ptr());
-                t.setStatusCode(data.code());
-                t.setProgress(data.progress());
-                if(t instanceof VideoResource videoResource){
-                    if(manager.target.level.isClientSide){
-                        if(data.code() == TextureControlCode.PLAYING){
-                            Vec3 pos = new Vec3(manager.target.getX(), manager.target.getY(), manager.target.getZ());
-                            MSoundEngine.playWithProgressOffset(videoResource, pos, data.progress());
-                        }
-                    }
-                }
+        for(Map.Entry<Integer, Texture2DManager.Record> entry : map.entrySet()){
+            eid = entry.getKey();
+            updatingSource = entry.getValue();
+            Entity entity = Minecraft.getInstance().level.getEntity(eid);
+            if(entity instanceof Renderable2D entity2d){
+                entity2d.getTexture2DManager().updateBy(updatingSource);
             }
         }
     }
 
-    public static DataRenewPacket getRenewData(){
-        return new DataRenewPacket(managers);
+    /**
+     * 用于服务端同步数据
+     * Used to synchronize data from the server side
+     */
+    public synchronized void onAnimSync(AnimSyncData data){
+        assert target.getId() == data.entityId();
+        int ptr = data.ptr();
+        TextureControlCode code = data.code();
+        int progress = data.progress();
+
+        switch (code){
+            case PAUSE -> pauseInternal(ptr, progress);
+            case RESUME -> resumeInternal(ptr, progress);
+            case CHANGE -> changeInternal(ptr, progress);
+        }
+    }
+
+    public static T2DMRenewPacket getRenewData(MinecraftServer server){
+        Iterable<ServerLevel> slvls = server.getAllLevels();
+        ArrayList<Texture2DManager.Record> managers = new ArrayList<>();
+        for(ServerLevel slvl : slvls){
+            for(Entity e : slvl.getAllEntities()){
+                if(e instanceof Renderable2D e2D){
+                    managers.add(e2D.getTexture2DManager().toRecord());
+                }
+            }
+        }
+        return new T2DMRenewPacket(managers);
     }
     public synchronized CompoundTag getSaveData(){
         int count = textureSets.size();
@@ -70,6 +87,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
         for(int i = 0; i < count; i++){
             status[i] = textureSets.get(i).getStatusCode().getIndex();
             progress[i] = textureSets.get(i).getProgress();
+            if(i == texturePtr && isAutoPause()) status[i] = TextureControlCode.PLAYING.getIndex();
         }
         tag.putIntArray("status", status);
         tag.putIntArray("progress", progress);
@@ -82,20 +100,38 @@ public class Texture2DManager implements Iterable<Texture2D> {
         int[] progress = tag.getIntArray("progress");
         if(count == this.textureSets.size()){
             this.texturePtr = ptr;
+            TextureControlCode code;
             for(int i = 0; i < count; i++){
-                TextureControlCode code = TextureControlCode.values()[status[i]];
+                code = TextureControlCode.values()[status[i]];
                 textureSets.get(i).setStatusCode(code);
                 textureSets.get(i).setProgress(progress[i]);
             }
         }
     }
-    public static void tickAll(){
-        for(Texture2DManager manager : managers){
-            for(Texture2D texture2D : manager){
-                texture2D.tick();
+
+    public synchronized void updateBy(Texture2DManager.Record record){
+        if(this.getEntityId() != record.entityId){
+            return;
+        }
+        int count = this.getTextureCount();
+        for(int i = 0; i < count; i++){
+            this.textureSets.get(i).setStatusCode(record.getStatus(i));
+            this.textureSets.get(i).setProgress(record.getProgress(i));
+        }
+        this.texturePtr = record.texturePtr;
+        Texture2D t = this.getTextureSet();
+        if(t instanceof VideoResource videoResource){
+            TextureControlCode code = this.getTextureSet().getStatusCode();
+            int progress = this.getTextureSet().getProgress();
+            if(this.target.level.isClientSide){
+                if(code == TextureControlCode.PLAYING){
+                    Vec3 pos = new Vec3(this.target.getX(), this.target.getY(), this.target.getZ());
+                    MSoundEngine.playWithProgressOffset(videoResource, pos, progress);
+                }
             }
         }
     }
+
     /**
      * 创建二维材质管理器
      *
@@ -113,7 +149,8 @@ public class Texture2DManager implements Iterable<Texture2D> {
         if(!(target instanceof Renderable2D)) throw new IllegalStateException("Entity " + target + " is not 2D.");
         this.target = target;
         this.texturePtr = defaultPtr;
-        managers.add(this);
+
+
 
     }
 
@@ -143,8 +180,8 @@ public class Texture2DManager implements Iterable<Texture2D> {
      */
     public void change(int newPtr,  int progress){
         if(target.level.isClientSide){
-            SyncAnimData data = new SyncAnimData(target.getId(),newPtr,TextureControlCode.CHANGE, progress);
-            DataSyncPacket packet = new DataSyncPacket(Minecraft.getInstance().player.getUUID(), data);
+            AnimSyncData data = new AnimSyncData(target.getId(),newPtr,TextureControlCode.CHANGE, progress);
+            AnimSyncPacket packet = new AnimSyncPacket(data);
             NetworkHandler.INSTANCE.sendToServer(packet);
         }
         changeInternal(newPtr, progress);
@@ -178,7 +215,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
      */
     public void autoPause(){
         if(!isPaused()){
-            textureSets.get(texturePtr).pause();
+            pause();
             autoPause = true;
         }
     }
@@ -189,7 +226,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
      */
     public void autoResume(){
         if(autoPause && isPaused()){
-            textureSets.get(texturePtr).resume();
+            resume();
             autoPause = false;
         }
     }
@@ -216,8 +253,8 @@ public class Texture2DManager implements Iterable<Texture2D> {
      */
     public void pause(int ptr){
         if(target.level.isClientSide){
-            SyncAnimData data = new SyncAnimData(target.getId(),ptr,TextureControlCode.PAUSE, textureSets.get(ptr).getProgress());
-            DataSyncPacket packet = new DataSyncPacket(Minecraft.getInstance().player.getUUID(),data);
+            AnimSyncData data = new AnimSyncData(target.getId(),ptr,TextureControlCode.PAUSE, textureSets.get(ptr).getProgress());
+            AnimSyncPacket packet = new AnimSyncPacket(data);
             NetworkHandler.INSTANCE.sendToServer(packet);
         }
         pauseInternal(ptr, textureSets.get(ptr).getProgress());
@@ -247,8 +284,8 @@ public class Texture2DManager implements Iterable<Texture2D> {
      */
     public void resume(int ptr){
         if(target.level.isClientSide){
-            SyncAnimData data = new SyncAnimData(target.getId(),ptr,TextureControlCode.RESUME, textureSets.get(ptr).getProgress());
-            DataSyncPacket packet = new DataSyncPacket(Minecraft.getInstance().player.getUUID(),data);
+            AnimSyncData data = new AnimSyncData(target.getId(),ptr,TextureControlCode.RESUME, textureSets.get(ptr).getProgress());
+            AnimSyncPacket packet = new AnimSyncPacket(data);
             NetworkHandler.INSTANCE.sendToServer(packet);
         }
         resumeInternal(ptr, textureSets.get(ptr).getProgress());
@@ -266,22 +303,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
         t.setProgress(progress);
     }
 
-    /**
-     * 用于服务端同步数据
-     * Used to synchronize data from the server side
-     */
-    public synchronized void onSyncData(SyncAnimData data){
-        assert target.getId() == data.entityId();
-        int ptr = data.ptr();
-        TextureControlCode code = data.code();
-        int progress = data.progress();
 
-        switch (code){
-            case PAUSE -> pauseInternal(ptr, progress);
-            case RESUME -> resumeInternal(ptr, progress);
-            case CHANGE -> changeInternal(ptr, progress);
-        }
-    }
 
     public boolean isPaused(){
         return this.textureSets.get(texturePtr).getStatusCode() == TextureControlCode.PAUSE;
@@ -307,8 +329,60 @@ public class Texture2DManager implements Iterable<Texture2D> {
         return textureSets.iterator();
     }
 
-    public static void clearTextureManagers(){
-        managers.clear();
+    public Record toRecord(){
+        return new Record(this);
+    }
+
+    public static class Record{
+        public static final Record EMPTY = new Record(-1,0,0);
+        public final int entityId;
+        public final int texturePtr;
+        public final int textureCount;
+        private final ArrayList<TextureControlCode> status = new ArrayList<>();
+        private final ArrayList<Integer> progresses = new ArrayList<>();
+
+        public Record(Texture2DManager manager){
+            entityId = manager.getEntityId();
+            texturePtr = manager.getTexturePtr();
+            textureCount = manager.getTextureCount();
+            for(Texture2D t2d : manager){
+                status.add(t2d.getStatusCode());
+                progresses.add(t2d.getProgress());
+            }
+        }
+        private Record(int entityId, int texturePtr, int textureCount){
+            this.entityId = entityId;
+            this.texturePtr = texturePtr;
+            this.textureCount = textureCount;
+        }
+        public static void writeToBuf(FriendlyByteBuf buf, Texture2DManager.Record record){
+            buf.writeInt(record.entityId);
+            buf.writeInt(record.texturePtr);
+            buf.writeInt(record.textureCount);
+            for(int i = 0; i < record.textureCount; i++){
+                buf.writeEnum(record.status.get(i));
+                buf.writeInt(record.progresses.get(i));
+            }
+        }
+
+        public static Texture2DManager.Record readFromBuf(FriendlyByteBuf buf){
+            int entityId = buf.readInt();
+            int ptr = buf.readInt();
+            int count = buf.readInt();
+            Record rec = new Record(entityId, ptr, count);
+            for(int i = 0; i < count; i++){
+                rec.status.add(buf.readEnum(TextureControlCode.class));
+                rec.progresses.add(buf.readInt());
+            }
+            return rec;
+        }
+
+        public TextureControlCode getStatus(int i){
+            return status.get(i);
+        }
+        public int getProgress(int i){
+            return progresses.get(i);
+        }
     }
 
 

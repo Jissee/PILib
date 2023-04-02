@@ -69,7 +69,4 @@ public class SingleTexture2D implements Texture2D{
 
     @Override
     public void resume() {}
-
-    @Override
-    public void tick() {}
 }
