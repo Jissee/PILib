@@ -1,14 +1,12 @@
 package me.jissee.pilib.resource;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.logging.LogUtils;
 import me.jissee.pilib.render.RenderSetting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
-import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,7 +40,6 @@ import static me.jissee.pilib.resource.LocalResourceUtil.toNanoInterval;
  * Please pay attention to the SIZE of decoded frames.<br/>
  */
 public class VideoResource implements Texture2D {
-    private static final Logger LOGGER = LogUtils.getLogger();
     private static final ResourceLocation BLACK = new ResourceLocation(MODID,"textures/entity/black.png");
     private static TextureManager tm;
     private final LocalVideoFile videoFile;
@@ -69,8 +66,8 @@ public class VideoResource implements Texture2D {
      * @param renderSetting  渲染设置 The {@link RenderSetting} of this video.
      */
     public VideoResource(LocalVideoFile videoFile, SoundEvent sound, TextureControlCode defaultStatus,
-                         TextureSetting textureSetting, RenderSetting renderSetting){
-
+                         TextureSetting textureSetting, RenderSetting renderSetting)
+    {
         this.videoFile = videoFile;
         this.nanoInterval = toNanoInterval(videoFile.fps());
         this.totalTime = videoFile.frames() * nanoInterval;
@@ -82,7 +79,7 @@ public class VideoResource implements Texture2D {
 
     private synchronized int getIndex() {
         if(statusCode == TextureControlCode.PAUSE){
-            return (getProgress() / MAX_PROGRESS * videoFile.frames()) + 1;
+            return (int)((double)getProgress() / (double)MAX_PROGRESS * videoFile.frames()) + 1;
         }
         long thisNanoTime = System.nanoTime();
         if(baseNanoTime == -1){
@@ -117,14 +114,13 @@ public class VideoResource implements Texture2D {
         return lastImage;
     }
 
-    //MC-257522
     @Override
     public ResourceLocation getCurrentTextureFront(){
-        if(tm == null){
-            tm = Minecraft.getInstance().textureManager;
-        }
         if(statusCode == TextureControlCode.PAUSE && previousTexture != null){
             return previousTexture;
+        }
+        if(tm == null){
+            tm = Minecraft.getInstance().textureManager;
         }
         NativeImage img = getNativeImage();
         if(previousTexture != null && !finishedRead){
@@ -133,17 +129,16 @@ public class VideoResource implements Texture2D {
             }
             tm.release(previousTexture);
         }
-
         if(!finishedRead) {
             previousTexture = tm.register(videoFile.name(), new DynamicTexture(img));
         }
-
         return previousTexture;
     }
     @Override
     public ResourceLocation getCurrentTextureBack() {
         return BLACK;
     }
+
 
     public VideoResource setRenderSetting(RenderSetting setting) {
         this.renderSetting = setting;
@@ -176,7 +171,12 @@ public class VideoResource implements Texture2D {
 
     @Override
     public void setProgress(int progress) {
-        if(progress > MAX_PROGRESS) progress = MAX_PROGRESS;
+        if(progress > MAX_PROGRESS) {
+            progress = MAX_PROGRESS;
+            finishedRead = true;
+        }else{
+            finishedRead = false;
+        }
         baseNanoTime = System.nanoTime();
         baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
         pauseProgress = progress;
@@ -203,8 +203,10 @@ public class VideoResource implements Texture2D {
 
     @Override
     public void pause() {
-        this.pauseProgress = getProgress();
-        this.statusCode = TextureControlCode.PAUSE;
+        if(this.statusCode != TextureControlCode.PAUSE){
+            this.pauseProgress = getProgress();
+            this.statusCode = TextureControlCode.PAUSE;
+        }
     }
     @Override
     public void resume() {
@@ -212,10 +214,5 @@ public class VideoResource implements Texture2D {
             setProgress(pauseProgress);
             this.statusCode = TextureControlCode.PLAYING;
         }
-    }
-
-    @Override
-    public void tick() {
-        getIndex();
     }
 }

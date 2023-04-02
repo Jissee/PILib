@@ -51,9 +51,5 @@ public interface Texture2D {
      * 恢复或开始播放
      */
     void resume();
-    /**
-     * 在没有渲染的情况下保持材质动画的播放
-     * Keep texture playing while not rendering
-     */
-    void tick();
+
 }

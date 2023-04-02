@@ -17,8 +17,8 @@ public class NetworkHandler {
     );
 
     public static void registerPackets(){
-        INSTANCE.registerMessage(id++, DataSyncPacket.class, DataSyncPacket::encode, DataSyncPacket::new, DataSyncPacket::handle);
-        INSTANCE.registerMessage(id++, DataRenewPacket.class, DataRenewPacket::encode, DataRenewPacket::new, DataRenewPacket::handle);
-
+        INSTANCE.registerMessage(id++, AnimSyncPacket.class, AnimSyncPacket::encode, AnimSyncPacket::new, AnimSyncPacket::handle);
+        INSTANCE.registerMessage(id++, T2DMRenewPacket.class, T2DMRenewPacket::encode, T2DMRenewPacket::new, T2DMRenewPacket::handle);
+        INSTANCE.registerMessage(id++, T2DMSyncPacket.class, T2DMSyncPacket::encode, T2DMSyncPacket::new, T2DMSyncPacket::handle);
     }
 }

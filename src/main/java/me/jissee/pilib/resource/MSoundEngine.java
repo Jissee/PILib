@@ -48,7 +48,6 @@ public class MSoundEngine {
     }
     public static void refresh(){
         try {
-
             Field f_loaded = SoundEngine.class.getDeclaredField(getMappedName("loaded"));
             f_loaded.setAccessible(true);
             boolean loaded = (boolean) f_loaded.get(vanillaSoundEngine);

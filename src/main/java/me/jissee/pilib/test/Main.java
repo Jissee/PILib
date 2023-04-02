@@ -23,7 +23,7 @@ import static me.jissee.pilib.resource.LocalResourceUtil.toNanoInterval;
 public class Main
 {
     public static final LocalResourceUtil UTIL = new LocalResourceUtil(MODID,false, false);
-    public static VideoResource vdo;
+    public static LocalVideoFile f ;
 
     public static void setuptest(){
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -37,13 +37,12 @@ public class Main
         //UTIL.addRemovalExclusion(new ResourceLocation(MODID,"video/qmdyj-full.mp4"));
         UTIL.register(new ResourceLocation(MODID,"video/qmdyj-full.mp4"));
         UTIL.extractAll();
-        LocalVideoFile f = new LocalVideoFile(UTIL, UTIL.getLocalFileName(0), "", 3037, 25);
+        f = new LocalVideoFile(UTIL, UTIL.getLocalFileName(0), "", 3037, 25);
         try {
             f.decode();
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
-        vdo  = new VideoResource(f,null, TextureControlCode.PLAYING,  new TextureSetting(3.2f,1.8f), RenderSetting.CENTER_ROTATIONAL_SINGLE);
         //TestEntity.vdo = TestEntity.prepareVideo6();
 
     }

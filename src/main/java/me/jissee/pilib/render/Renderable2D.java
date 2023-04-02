@@ -14,6 +14,7 @@ public interface Renderable2D {
      * Create a {@link Texture2DManager} to manager texture sets.<br/>
      */
     Texture2DManager getTexture2DManager();
+
     default void loadData(){
         if(this instanceof Entity entity){
             Texture2DManager manager = this.getTexture2DManager();
@@ -30,6 +31,7 @@ public interface Renderable2D {
             throw new RuntimeException("Renderable2D should be implemented on Entity.");
         }
     }
+
     default void saveData(){
         if(this instanceof Entity entity){
             Texture2DManager manager = this.getTexture2DManager();

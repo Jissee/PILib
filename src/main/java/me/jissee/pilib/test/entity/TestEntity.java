@@ -118,7 +118,7 @@ public class TestEntity extends Mob implements Renderable2D {
     }
 
     public VideoResource prepareVideo5(){
-        return Main.vdo.setSound(XYY25.get());
+        return new VideoResource(Main.f,null, TextureControlCode.PLAYING,  new TextureSetting(3.2f,1.8f), RenderSetting.CENTER_ROTATIONAL_SINGLE).setSound(XYY25.get());
     }
 
     public static VideoResource prepareVideo6(){
