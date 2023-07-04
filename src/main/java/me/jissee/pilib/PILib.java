@@ -22,7 +22,7 @@ public class PILib
     public PILib(){
         IEventBus eventBus = FMLJavaModLoadingContext.get().getModEventBus();
         eventBus.addListener(this::onCommonSetup);
-        me.jissee.pilib.test.Main.setuptest();
+        //me.jissee.pilib.test.Main.setuptest();
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(ServerEventHandler.class);
         if(FMLLoader.getDist().isClient()){
