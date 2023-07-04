@@ -29,7 +29,7 @@ repositories {
 }    
 
 dependencies {
-    implementation fg.deobf('me.jissee.pilib:PILib-<MC-version>:<LIB-version>')
+    implementation fg.deobf('me.jissee.pilib:pilib-<MC-version>:<LIB-version>')
 }
 ```
 
