@@ -171,14 +171,20 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             artifact sourceJar{
-                classifier. "sources"
+                classifier "sources"
             }
             artifact jar
         }
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/mcmodsrepo"
+            name = "pilib"
+            url = "https://api-g.cloudsmith.io/maven/jissee/pilib/"
+
+            credentials {
+                username = System.getenv("CLOUDSMITH_USR")
+                password = System.getenv("CLOUDSMITH_PSW")
+            }
         }
     }
 }
