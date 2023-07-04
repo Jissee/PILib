@@ -13,6 +13,9 @@ import java.util.function.Supplier;
 
 import static me.jissee.pilib.PILib.LOGGER;
 
+/**
+ * 新玩家登陆时,服务器向其发送所有相关数据
+ */
 public class T2DMRenewPacket implements Iterable<Texture2DManager.Record> {
     public final int length;
     public final ArrayList<Texture2DManager.Record> data = new ArrayList<>();

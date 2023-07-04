@@ -1,6 +1,10 @@
 package me.jissee.pilib.resource;
 
-import me.jissee.pilib.network.*;
+import me.jissee.pilib.event.*;
+import me.jissee.pilib.network.AnimSyncData;
+import me.jissee.pilib.network.AnimSyncPacket;
+import me.jissee.pilib.network.NetworkHandler;
+import me.jissee.pilib.network.T2DMRenewPacket;
 import me.jissee.pilib.render.Renderable2D;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
@@ -9,6 +13,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -31,14 +37,14 @@ public class Texture2DManager implements Iterable<Texture2D> {
      * Client accept new data from server
      */
     public static void onManagerRenew(T2DMRenewPacket packet){
-        HashMap<Integer, Texture2DManager.Record> map = new HashMap<>();
-        for(Texture2DManager.Record managerRecord : packet){
+        HashMap<Integer, Record> map = new HashMap<>();
+        for(Record managerRecord : packet){
             map.put(managerRecord.entityId, managerRecord);
         }
         int eid;
-        Texture2DManager.Record updatingSource;
+        Record updatingSource;
 
-        for(Map.Entry<Integer, Texture2DManager.Record> entry : map.entrySet()){
+        for(Map.Entry<Integer, Record> entry : map.entrySet()){
             eid = entry.getKey();
             updatingSource = entry.getValue();
             Entity entity = Minecraft.getInstance().level.getEntity(eid);
@@ -67,7 +73,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
 
     public static T2DMRenewPacket getRenewData(MinecraftServer server){
         Iterable<ServerLevel> slvls = server.getAllLevels();
-        ArrayList<Texture2DManager.Record> managers = new ArrayList<>();
+        ArrayList<Record> managers = new ArrayList<>();
         for(ServerLevel slvl : slvls){
             for(Entity e : slvl.getAllEntities()){
                 if(e instanceof Renderable2D e2D){
@@ -109,7 +115,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
         }
     }
 
-    public synchronized void updateBy(Texture2DManager.Record record){
+    public synchronized void updateBy(Record record){
         if(this.getEntityId() != record.entityId){
             return;
         }
@@ -150,8 +156,6 @@ public class Texture2DManager implements Iterable<Texture2D> {
         this.target = target;
         this.texturePtr = defaultPtr;
 
-
-
     }
 
     /**
@@ -178,13 +182,15 @@ public class Texture2DManager implements Iterable<Texture2D> {
      * @param newPtr      新的下标指针 The new index of the textures.
      * @param progress    新材质的播放进度 The playing time of the new texture.
      */
-    public void change(int newPtr,  int progress){
-        if(target.level.isClientSide){
+    public void change(int newPtr, int progress){
+        if(MinecraftForge.EVENT_BUS.post(new TextureChangingEvent(this, newPtr, progress))) return;
+        changeInternal(newPtr, progress);
+        if(!target.level.isClientSide){
             AnimSyncData data = new AnimSyncData(target.getId(),newPtr,TextureControlCode.CHANGE, progress);
             AnimSyncPacket packet = new AnimSyncPacket(data);
-            NetworkHandler.INSTANCE.sendToServer(packet);
+            NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
         }
-        changeInternal(newPtr, progress);
+
     }
     private synchronized void changeInternal(int newPtr, int progress){
         Texture2D oldt = textureSets.get(texturePtr);
@@ -252,12 +258,17 @@ public class Texture2DManager implements Iterable<Texture2D> {
      * Pause the texture with index
      */
     public void pause(int ptr){
-        if(target.level.isClientSide){
+        if(textureSets.get(ptr).getStatusCode() == TextureControlCode.PAUSE){
+            return;
+        }
+        if(MinecraftForge.EVENT_BUS.post(new TexturePausingEvent(this, ptr, textureSets.get(ptr).getProgress()))) return;
+        pauseInternal(ptr, textureSets.get(ptr).getProgress());
+        if(!target.level.isClientSide){
             AnimSyncData data = new AnimSyncData(target.getId(),ptr,TextureControlCode.PAUSE, textureSets.get(ptr).getProgress());
             AnimSyncPacket packet = new AnimSyncPacket(data);
-            NetworkHandler.INSTANCE.sendToServer(packet);
+            NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
         }
-        pauseInternal(ptr, textureSets.get(ptr).getProgress());
+        MinecraftForge.EVENT_BUS.post(new TexturePausedEvent(this, ptr, textureSets.get(ptr).getProgress()));
     }
     private synchronized void pauseInternal(int ptr,int progress){
         texturePtr = ptr;
@@ -283,12 +294,17 @@ public class Texture2DManager implements Iterable<Texture2D> {
      * Resume the texture with index
      */
     public void resume(int ptr){
-        if(target.level.isClientSide){
+        if(textureSets.get(ptr).getStatusCode() == TextureControlCode.PLAYING){
+            return;
+        }
+        if(MinecraftForge.EVENT_BUS.post(new TextureResumingEvent(this, ptr, textureSets.get(ptr).getProgress()))) return;
+        resumeInternal(ptr, textureSets.get(ptr).getProgress());
+        if(!target.level.isClientSide){
             AnimSyncData data = new AnimSyncData(target.getId(),ptr,TextureControlCode.RESUME, textureSets.get(ptr).getProgress());
             AnimSyncPacket packet = new AnimSyncPacket(data);
-            NetworkHandler.INSTANCE.sendToServer(packet);
+            NetworkHandler.INSTANCE.send(PacketDistributor.ALL.noArg(), packet);
         }
-        resumeInternal(ptr, textureSets.get(ptr).getProgress());
+        MinecraftForge.EVENT_BUS.post(new TextureResumedEvent(this, ptr, textureSets.get(ptr).getProgress()));
     }
     private synchronized void resumeInternal(int ptr, int progress){
         texturePtr = ptr;
@@ -355,7 +371,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
             this.texturePtr = texturePtr;
             this.textureCount = textureCount;
         }
-        public static void writeToBuf(FriendlyByteBuf buf, Texture2DManager.Record record){
+        public static void writeToBuf(FriendlyByteBuf buf, Record record){
             buf.writeInt(record.entityId);
             buf.writeInt(record.texturePtr);
             buf.writeInt(record.textureCount);
@@ -365,7 +381,7 @@ public class Texture2DManager implements Iterable<Texture2D> {
             }
         }
 
-        public static Texture2DManager.Record readFromBuf(FriendlyByteBuf buf){
+        public static Record readFromBuf(FriendlyByteBuf buf){
             int entityId = buf.readInt();
             int ptr = buf.readInt();
             int count = buf.readInt();

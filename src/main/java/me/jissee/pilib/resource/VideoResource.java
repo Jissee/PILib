@@ -47,6 +47,7 @@ public class VideoResource implements Texture2D {
     private final long nanoInterval;
     private final long totalTime;
     private boolean finishedRead = false;
+    private boolean finishedEventNeedPost = true;
     private NativeImage lastImage;
     private long baseNanoTime = -1;
     private int pauseProgress;
@@ -57,11 +58,15 @@ public class VideoResource implements Texture2D {
     /**
      * 由于视频解码需要一定的时间，如果在游戏内播放时未完成解码会导致错误，建议在模组加载时便定义、解码，然后再在实体注册时绑定到实体上。<br/>
      * It costs some time to decode the video and the game may crash
-     * on join if the video decoding is not finished.
+     * on player join if the video decoding is not finished.
      * It is recommended to create and decode video resources at the mod loading phase
      * and then bind it to entities when registering them.
      * @param videoFile      本地视频文件,如果不需要使mod调用ffmpeg解码，则可空 The local video file. If there is no need for the mod to decode it by ffmpeg, it is nullable.
-     * @param sound          视频的声音事件，可能在模组初始化时候声音时间没有注册完成，可以先留空，在实体内注册时添加声音 The {@link SoundEvent} of the video. It may not finish registration while the mod is initializing. So you can set this to null first and add the sound when register the video in entities.
+     * @param sound          视频的声音事件，可能在模组初始化时候声音时间没有注册完成，可以先留空，在实体内注册时添加声音。
+     *                       此声音在RECORDS声道上播放
+     *                       The {@link SoundEvent} of the video. It may not finish registration while the mod is initializing.
+     *                       So you can set this to null first and add the sound when register the video in entities.
+     *                       The sound is played on RECORDS channel.
      * @param textureSetting 材质设置 The {@link TextureSetting} of this video.
      * @param renderSetting  渲染设置 The {@link RenderSetting} of this video.
      */
@@ -78,17 +83,23 @@ public class VideoResource implements Texture2D {
     }
 
     private synchronized int getIndex() {
+        int index;
         if(statusCode == TextureControlCode.PAUSE){
-            return (int)((double)getProgress() / (double)MAX_PROGRESS * videoFile.frames()) + 1;
+            index = (int)((double)getProgress() / (double)MAX_PROGRESS * videoFile.frames()) + 1;
+        }else{
+            long thisNanoTime = System.nanoTime();
+            if(baseNanoTime == -1){
+                baseNanoTime = thisNanoTime;
+            }
+            long diff = thisNanoTime - baseNanoTime;
+            index = (int) (diff / nanoInterval) + 1;
         }
-        long thisNanoTime = System.nanoTime();
-        if(baseNanoTime == -1){
-            baseNanoTime = thisNanoTime;
-        }
-        long diff = thisNanoTime - baseNanoTime;
-        int index = (int) (diff / nanoInterval) + 1;
+
         if(index > videoFile.frames()){
             index = videoFile.frames();
+            if(!finishedRead){
+                finishedRead = true;
+            }
         }
         return index;
     }
@@ -100,10 +111,6 @@ public class VideoResource implements Texture2D {
         int index = getIndex();
         NativeImage img;
         File textureFile = videoFile.getImageFile(index);
-        if(!textureFile.exists()){
-            finishedRead = true;
-            return lastImage;
-        }
         try {
             InputStream istream = new FileInputStream(textureFile);
             img = NativeImage.read(NativeImage.Format.RGBA,istream);
@@ -129,7 +136,7 @@ public class VideoResource implements Texture2D {
             }
             tm.release(previousTexture);
         }
-        if(!finishedRead) {
+        if(!finishedRead || previousTexture == null) {
             previousTexture = tm.register(videoFile.name(), new DynamicTexture(img));
         }
         return previousTexture;
@@ -158,6 +165,7 @@ public class VideoResource implements Texture2D {
     public void setStatusCode(TextureControlCode code) {
         this.statusCode = code;
     }
+
     @Override
     public int getProgress() {
         if(statusCode == TextureControlCode.PAUSE){
@@ -177,6 +185,7 @@ public class VideoResource implements Texture2D {
         }else{
             finishedRead = false;
         }
+        finishedEventNeedPost = true;
         baseNanoTime = System.nanoTime();
         baseNanoTime -= totalTime * ((double)progress / (double)MAX_PROGRESS);
         pauseProgress = progress;
@@ -210,9 +219,20 @@ public class VideoResource implements Texture2D {
     }
     @Override
     public void resume() {
+        if(finishedRead){
+            return;
+        }
         if(this.statusCode == TextureControlCode.PAUSE){
             setProgress(pauseProgress);
             this.statusCode = TextureControlCode.PLAYING;
+        }
+    }
+    public boolean finishedEventNeedPost(){
+        if(finishedRead && finishedEventNeedPost){
+            finishedEventNeedPost = false;
+            return true;
+        }else{
+            return false;
         }
     }
 }

@@ -6,6 +6,7 @@ import me.jissee.pilib.test.client.MSoundEvents;
 import me.jissee.pilib.test.entity.MEntityTypes;
 import me.jissee.pilib.test.event.TestServerEventHandler;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLLoader;
@@ -29,6 +30,7 @@ public class Main
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         MEntityTypes.ENTITY_TYPES.register(modEventBus);
         MSoundEvents.SOUNDEVENTS.register(modEventBus);
+        MinecraftForge.EVENT_BUS.addListener(TestServerEventHandler::onVideoFinished);
 
         if(FMLLoader.getDist().isDedicatedServer()){
             TestServerEventHandler.init(modEventBus);
