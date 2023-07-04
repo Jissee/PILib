@@ -171,7 +171,7 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             artifact sourceJar{
-                classifier "sources"
+                classifier. "sources"
             }
             artifact jar
         }
