@@ -2,9 +2,11 @@ package me.jissee.pilib.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import me.jissee.pilib.event.VideoFinishedPlayingEvent;
 import me.jissee.pilib.resource.Texture2D;
 import me.jissee.pilib.resource.Texture2DManager;
 import me.jissee.pilib.resource.TextureSetting;
+import me.jissee.pilib.resource.VideoResource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -15,6 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.MinecraftForge;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -53,6 +56,11 @@ public abstract class Renderer2D<T extends Entity & Renderable2D> extends Entity
         float pEntityNormal = (float) (-pEntityYaw + Math.PI / 2);
 
         Texture2D texture2D = manager.getTextureSet();
+        if(texture2D instanceof VideoResource video){
+            if(video.finishedEventNeedPost()){
+                MinecraftForge.EVENT_BUS.post(new VideoFinishedPlayingEvent(manager, manager.getTexturePtr()));
+            }
+        }
         ResourceLocation front = texture2D.getCurrentTextureFront();
         ResourceLocation back = texture2D.getCurrentTextureBack();
 

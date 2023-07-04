@@ -14,6 +14,9 @@ import net.minecraftforge.network.PacketDistributor;
 import java.util.Optional;
 import java.util.function.Supplier;
 
+/**
+ * 当一个新的实体进入世界，服务端从硬盘加载数据，客户端向服务端请求这个实体的所有数据
+ */
 public class T2DMSyncPacket {
     public final int entityId;
     private final Texture2DManager.Record record;
@@ -52,6 +55,7 @@ public class T2DMSyncPacket {
                         Texture2DManager.Record record = entity2d.getTexture2DManager().toRecord();
                         T2DMSyncPacket packet = new T2DMSyncPacket(record);
                         NetworkHandler.INSTANCE.send(PacketDistributor.PLAYER.with(()->ctx.get().getSender()), packet);
+                        break;
                     }
                 }
             }
