@@ -186,8 +186,8 @@ publishing {
             url = "https://api-g.cloudsmith.io/maven/jissee/pilib/"
 
             credentials {
-                username = System.getenv("")//CLOUDSMITH_USR
-                password = System.getenv("")//CLOUDSMITH_PSW
+                username = System.getenv("CLOUDSMITH_USR")
+                password = System.getenv("CLOUDSMITH_PSW")
             }
         }
     }

@@ -33,7 +33,7 @@ dependencies {
 }
 ```
 
-Currently, it only runs on forge 1.19.2 and 1.19.3, but it is scheduled to back port to some legacy versions.   
+The supported versions are listed above. Please replace the placeholders with those versions while developing.   
 Also, the compatibility on different platforms is also in need of development and test.
 
 <li> How to develop with PILib?   </li>
